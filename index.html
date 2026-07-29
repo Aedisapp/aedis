@@ -69,7 +69,7 @@
 // el SDK intenta registrar el suyo, el navegador simplemente devuelve el
 // registro existente (no lo duplica).
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('OneSignalSDKWorker.js', { scope: '/AEDIS_APP/' })
+  navigator.serviceWorker.register('OneSignalSDKWorker.js', { scope: '/aedis/' })
     .then(function(reg) { console.log('[SW] registro manual previo OK, scope=' + reg.scope); })
     .catch(function(e) { console.log('[SW] registro manual previo FALLÓ:', e && e.name, e && e.message); });
 }
@@ -80,7 +80,7 @@ if ('serviceWorker' in navigator) {
   OneSignalDeferred.push(async function(OneSignal) {
     try {
       await OneSignal.init({
-        appId: "9a409dcc-a927-47e6-a37b-7955d5ef84f2",
+        appId: "e0a35a7d-d493-41a7-821e-56330da93ea9",
         allowLocalhostAsSecureOrigin: true,
         // ANTES: worker anidado en push/onesignal/ con su propio scope,
         // registrado en paralelo a otro service worker independiente
@@ -95,7 +95,7 @@ if ('serviceWorker' in navigator) {
         // la app (ver OneSignalSDKWorker.js: combina el push de OneSignal
         // con la lógica de cache-busting que antes vivía en sw.js aparte).
         serviceWorkerPath: "OneSignalSDKWorker.js",
-        serviceWorkerParam: { scope: "/AEDIS_APP/" },
+        serviceWorkerParam: { scope: "/aedis/" },
         // FIX REAL (confirmado en la documentación oficial de OneSignal
         // Web SDK v16 y en un issue reportado del propio SDK): dejar
         // `prompts: []` vacío NO desactiva el slidedown automático — el
@@ -145,14 +145,16 @@ if ('serviceWorker' in navigator) {
 
 <script>
 // ЗАМЕНИТЕ на актуальный URL вашего развёрнутого Apps Script веб-приложения
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwiBvSurSTwZi1Cb7RCU296wCYcW9mMCuJ-b2UijvYMzp2RTziRQc3A6-9_XOI-3KoboA/exec";
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwMgBbOFsvGjTnds9cooDGp0t56wYR5Jj2hv2mk_m-k0hANZPY5pvLlatvYrNNeUQzSzw/exec";
 
 // Client ID de Google Sign-In — público (va también en el backend, ver
 // GOOGLE_CLIENT_ID en Code_v5.gs; el frontend solo lo usa para inicializar
 // el botón, la verificación real del token ocurre en el backend contra el
 // endpoint de Google). Vacío = el botón "Continuar con Google" se oculta
 // en vez de intentar inicializar un login que fallaría.
-const GOOGLE_CLIENT_ID = "568853502-dgdafjpbo0ifk7if46q6kkn8vr1289nb.apps.googleusercontent.com";
+// TODO(migración): pegar aquí el nuevo OAuth Client ID (paso 5) — hasta
+// entonces el botón "Google Sign-In" no funcionará (el resto de la app sí).
+const GOOGLE_CLIENT_ID = "260208290245-s98s7p4g29b4e2nvhbqvudmkcse8u0ic.apps.googleusercontent.com";
 </script>
 
 <!-- Google Identity Services — botón "Continuar con Google" en #screenAuthLogin -->
@@ -10452,7 +10454,7 @@ window.diagnosePush = function() {
       // tragándose ese error internamente y resolviendo su init() igual,
       // sin mostrarlo nunca en consola.
       lines.push('Intentando registrar manualmente para ver el error real...');
-      return navigator.serviceWorker.register('OneSignalSDKWorker.js', { scope: '/AEDIS_APP/' })
+      return navigator.serviceWorker.register('OneSignalSDKWorker.js', { scope: '/aedis/' })
         .then(function(reg) {
           lines.push('Registro manual: OK (scope=' + reg.scope + ')');
           alert(lines.join('\n'));
