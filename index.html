@@ -803,20 +803,28 @@ body.pin-mode{overflow:hidden}
    pisar los ya usados por estado (pending=azul/approved=verde/
    rejected=rojo): admin reutiliza el azul de acento (es "el" color de la
    app), manager un morado sin uso previo, operario un ocre cálido. */
-.u-avatar{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-top:1px}
+/* Pedido 2026-07-29: "las tarjetas de personal son muy pequeñas, que
+   sean como las de informes" — .adu-card ya compartía rc-top/rc-line/
+   rc-id con las tarjetas de informes (mismo alto en general), pero el
+   usuario las quiere más grandes que eso, no solo igualadas — se sube
+   el tamaño aquí mismo con selectores acotados a .adu-card (nunca
+   tocando .rc-id/.rc-line "a pelo", que siguen siendo las de Diario). */
+.adu-card .rc-id{font-size:17px}
+.adu-card .rc-top{gap:12px}
+.u-avatar{width:46px;height:46px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;margin-top:1px}
 .u-avatar.admin{background:#e5f0ff;color:#0049c5}
 .u-avatar.manager{background:#f1eafd;color:#7c4fd6}
 .u-avatar.operario{background:#fbf1e1;color:#b9770e}
 /* Pedido 2026-07-29: el mismo color del avatar también en el texto del
    rol debajo del nombre (antes gris neutro como cualquier .rc-line). */
-.u-role-line{font-size:12px;font-weight:700;margin-top:6px}
+.u-role-line{font-size:13.5px;font-weight:700;margin-top:7px}
 .u-role-line.admin{color:#0049c5}
 .u-role-line.manager{color:#7c4fd6}
 .u-role-line.operario{color:#b9770e}
-.u-contact{font-size:12px;color:#8e8e93;margin-top:2px}
-.u-quick-actions{display:flex;gap:8px;margin-top:10px}
-.u-quick-btn{flex:1;border:none;border-radius:999px;padding:9px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:5px}
-.u-quick-btn i{font-size:14px}
+.u-contact{font-size:13px;color:#8e8e93;margin-top:3px}
+.u-quick-actions{display:flex;gap:8px;margin-top:12px}
+.u-quick-btn{flex:1;border:none;border-radius:999px;padding:11px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:5px}
+.u-quick-btn i{font-size:15px}
 .u-quick-btn.approve{background:#e5f9ec;color:#34c759}
 .u-quick-btn.approve:active{background:#d7f3e0}
 .u-quick-btn.reject{background:#fff0f0;color:#ff3b30}
@@ -1070,7 +1078,7 @@ body.pin-mode{overflow:hidden}
 .ad-status-badge.st-suspended{background:#f2f2f7;color:#636366}
 
 /* ── Panel Usuarios (admin) ── */
-.adu-card{background:#fff;border:.5px solid #e5e5ea;border-radius:12px;padding:14px 14px;margin-bottom:8px;box-shadow:0 2px 10px rgba(0,0,0,.07);cursor:pointer;touch-action:manipulation}
+.adu-card{background:#fff;border:.5px solid #e5e5ea;border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.07);cursor:pointer;touch-action:manipulation}
 .adu-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px}
 .adu-name{font-size:20px;font-weight:700;color:#000;letter-spacing:-.3px;margin-bottom:5px}
 .adu-meta{font-size:12.5px;color:#8e8e93;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -3284,7 +3292,7 @@ var LANGS = {
     lbl_cliente:'Cliente', lbl_obra:'Obra', lbl_fecha:'Fecha', lbl_operario:'Operario',
     lbl_ayudante:'Ayudante', lbl_vehiculo:'Vehículo', lbl_tipo:'Tipo', lbl_horas:'Horas',
     sub_trabajos:'Trabajos realizados', lbl_compania:'Compañía', sub_materiales:'Materiales utilizados',
-    lbl_precio:'Precio', lbl_foto_obra:'Fotos de obra', lbl_foto_mat:'Materiales / recibo', share_header:'Parte de trabajo',
+    lbl_precio:'Precio', lbl_foto_obra:'Fotos de obra', lbl_foto_mat:'Materiales / recibo', lbl_carpeta_informe:'Carpeta del informe', share_header:'Parte de trabajo',
     lbl_tipo_trabajo:'Tipo de trabajo', lbl_horas_trabajadas:'Horas trabajadas',
     lbl_compania_mat:'Compañía (materiales)', lbl_precio_mat:'Precio materiales (€)',
     lbl_descripcion:'Descripción', lbl_coste_materiales:'Coste materiales',
@@ -3326,7 +3334,7 @@ var LANGS = {
     rb_apply_rate_confirm_yes:'Aplicar', rb_apply_rate_success:'Tarifa aplicada a los informes aprobados del periodo',
     rb_btn_siguiente:'Siguiente', rb_btn_atras:'Atrás', rb_btn_previsualizar:'Previsualizar', rb_btn_crear:'Crear informe', rb_btn_generando:'Generando...',
     rb_success_title:'Informe creado', rb_success_sub:'El archivo se guardó en Google Drive', rb_btn_ver_archivo:'Ver archivo', rb_btn_cerrar:'Cerrar',
-    rg_empty:'Aún no hay informes generados', rg_btn_regenerar:'Regenerar', rg_btn_eliminar:'Eliminar', rg_periodo:'Período',
+    rg_empty:'Aún no hay informes generados', rg_btn_regenerar:'Regenerar', rg_btn_eliminar:'Eliminar', rg_periodo:'Período', rg_numero_informe:'Número de informe',
     status_pending:'Pendiente', status_approved:'Aprobado', status_rejected:'Rechazado',
     lbl_aprobo:'Aprobó', lbl_rechazo:'Rechazó',
     greet_worker:'Operario', greet_manager:'Manager', greet_admin:'Administrador',
@@ -3404,7 +3412,7 @@ var LANGS = {
     lbl_cliente:'Клиент', lbl_obra:'Объект', lbl_fecha:'Дата', lbl_operario:'Рабочий',
     lbl_ayudante:'Помощник', lbl_vehiculo:'Транспорт', lbl_tipo:'Тип', lbl_horas:'Часы',
     sub_trabajos:'Выполненные работы', lbl_compania:'Компания', sub_materiales:'Использованные материалы',
-    lbl_precio:'Цена', lbl_foto_obra:'Фото работ', lbl_foto_mat:'Материалы / чек', share_header:'Рабочий отчёт',
+    lbl_precio:'Цена', lbl_foto_obra:'Фото работ', lbl_foto_mat:'Материалы / чек', lbl_carpeta_informe:'Папка отчёта', share_header:'Рабочий отчёт',
     lbl_tipo_trabajo:'Тип работы', lbl_horas_trabajadas:'Отработанные часы',
     lbl_compania_mat:'Компания (материалы)', lbl_precio_mat:'Цена материалов (€)',
     lbl_descripcion:'Описание', lbl_coste_materiales:'Стоимость материалов',
@@ -3446,7 +3454,7 @@ var LANGS = {
     rb_apply_rate_confirm_yes:'Применить', rb_apply_rate_success:'Ставка применена к согласованным отчётам периода',
     rb_btn_siguiente:'Далее', rb_btn_atras:'Назад', rb_btn_previsualizar:'Предпросмотр', rb_btn_crear:'Создать отчёт', rb_btn_generando:'Формируется...',
     rb_success_title:'Отчёт создан', rb_success_sub:'Файл сохранён в Google Диске', rb_btn_ver_archivo:'Открыть файл', rb_btn_cerrar:'Закрыть',
-    rg_empty:'Пока нет созданных отчётов', rg_btn_regenerar:'Перегенерировать', rg_btn_eliminar:'Удалить', rg_periodo:'Период',
+    rg_empty:'Пока нет созданных отчётов', rg_btn_regenerar:'Перегенерировать', rg_btn_eliminar:'Удалить', rg_periodo:'Период', rg_numero_informe:'Номер отчёта',
     status_pending:'Ожидает', status_approved:'Одобрено', status_rejected:'Отклонено',
     lbl_aprobo:'Одобрил(а)', lbl_rechazo:'Отклонил(а)',
     greet_worker:'Рабочий', greet_manager:'Менеджер', greet_admin:'Администратор',
@@ -3524,7 +3532,7 @@ var LANGS = {
     lbl_cliente:'Client', lbl_obra:'Site', lbl_fecha:'Date', lbl_operario:'Worker',
     lbl_ayudante:'Assistant', lbl_vehiculo:'Vehicle', lbl_tipo:'Type', lbl_horas:'Hours',
     sub_trabajos:'Work done', lbl_compania:'Company', sub_materiales:'Materials used',
-    lbl_precio:'Price', lbl_foto_obra:'Site photos', lbl_foto_mat:'Materials / receipt', share_header:'Work report',
+    lbl_precio:'Price', lbl_foto_obra:'Site photos', lbl_foto_mat:'Materials / receipt', lbl_carpeta_informe:'Report folder', share_header:'Work report',
     lbl_tipo_trabajo:'Type of work', lbl_horas_trabajadas:'Hours worked',
     lbl_compania_mat:'Company (materials)', lbl_precio_mat:'Materials price (€)',
     lbl_descripcion:'Description', lbl_coste_materiales:'Materials cost',
@@ -3566,7 +3574,7 @@ var LANGS = {
     rb_apply_rate_confirm_yes:'Apply', rb_apply_rate_success:'Rate applied to the period’s approved reports',
     rb_btn_siguiente:'Next', rb_btn_atras:'Back', rb_btn_previsualizar:'Preview', rb_btn_crear:'Create report', rb_btn_generando:'Generating...',
     rb_success_title:'Report created', rb_success_sub:'The file was saved to Google Drive', rb_btn_ver_archivo:'Open file', rb_btn_cerrar:'Close',
-    rg_empty:'No generated reports yet', rg_btn_regenerar:'Regenerate', rg_btn_eliminar:'Delete', rg_periodo:'Period',
+    rg_empty:'No generated reports yet', rg_btn_regenerar:'Regenerate', rg_btn_eliminar:'Delete', rg_periodo:'Period', rg_numero_informe:'Report number',
     status_pending:'Pending', status_approved:'Approved', status_rejected:'Rejected',
     lbl_aprobo:'Approved by', lbl_rechazo:'Rejected by',
     greet_worker:'Worker', greet_manager:'Manager', greet_admin:'Administrator',
@@ -5405,6 +5413,14 @@ function uploadPhotosWithRetry(payload, photosObra, photosMat, retriesLeft) {
     // tarjeta ya terminada (ambos pasan por el mismo buildShareText).
     if (result.obraFolderUrl) payload.fotosObra = result.obraFolderUrl;
     if (result.materialesFolderUrl) payload.fotosMat = result.materialesFolderUrl;
+    // Pedido 2026-07-29: "si comparto todo el informe, el enlace debe ser
+    // el de la carpeta del informe (no las 2 subcarpetas sueltas)" — el
+    // backend ya calculaba reportFolderUrl (la carpeta que contiene Obra/
+    // Materiales) pero nadie lo leía. Igual con los conteos reales de
+    // fotos subidas (obraCount/materialesCount) para la tarjeta.
+    if (result.reportFolderUrl) payload.carpetaInforme = result.reportFolderUrl;
+    payload.fotosObraCount = result.obraCount || 0;
+    payload.fotosMatCount = result.materialesCount || 0;
     // Éxito: si el trabajador tiene la lista "Mis informes" abierta,
     // refrescamos para que las fotos ya aparezcan sin que tenga que hacerlo él.
     myReportsLoaded = false;
@@ -5497,12 +5513,26 @@ function buildShareText(r) {
   // enlace de carpeta directamente en el registro (FOTOS DE OBRA/FOTO
   // MATERIALES · ver el modelo de datos), no hace falta pedir nada al
   // backend para compartirlos.
+  // Pedido 2026-07-29: "si comparto TODO el informe, el enlace debe ser
+  // el de la carpeta del informe (contiene Obra+Materiales), no las 2
+  // subcarpetas sueltas" — todos los botones de Compartir de la app
+  // comparten el informe entero (no hay un "compartir solo materiales"
+  // todavía), así que cuando se conoce `carpetaInforme` (solo disponible
+  // para el informe recién creado en esta misma sesión, ver
+  // uploadPhotosWithRetry) se usa esa carpeta única; si no se conoce
+  // (informe ya existente, abierto más tarde) se cae al comportamiento de
+  // siempre — los 2 enlaces de subcarpeta ya guardados en la hoja.
+  var carpetaInforme = r.carpetaInforme;
   var fotosObra = r['FOTOS DE OBRA'] || r.fotosObra;
   var fotosMat = r['FOTO MATERIALES / RECIBO'] || r.fotosMat;
-  if (fotosObra || fotosMat) {
+  if (carpetaInforme || fotosObra || fotosMat) {
     lines.push('──────────────');
-    if (fotosObra) lines.push('📷 ' + t('lbl_foto_obra') + ': ' + fotosObra);
-    if (fotosMat)  lines.push('🧾 ' + t('lbl_fotos_materiales') + ': ' + fotosMat);
+    if (carpetaInforme) {
+      lines.push('📁 ' + t('lbl_carpeta_informe') + ': ' + carpetaInforme);
+    } else {
+      if (fotosObra) lines.push('📷 ' + t('lbl_foto_obra') + ': ' + fotosObra);
+      if (fotosMat)  lines.push('🧾 ' + t('lbl_fotos_materiales') + ': ' + fotosMat);
+    }
   }
   return lines.join('\n');
 }
@@ -6511,8 +6541,24 @@ var mgDetailId = null;
 // no tienen una altura fija que deje hueco libre abajo. Ahora es un
 // bloque normal, el último elemento de la tarjeta — empuja el alto de
 // la tarjeta si hace falta en vez de superponerse a nada.
+// Pedido 2026-07-29: mostrar el número REAL de fotos adjuntas (puede ser
+// 1, puede ser 15 entre las 2 secciones), no solo si hay o no — usa las
+// columnas nuevas FOTOS_OBRA_COUNT/FOTOS_MAT_COUNT si ya existen (backend
+// las rellena en cada subida, ver uploadReportPhotos/migrarColumnasFotosCount/
+// backfillFotosCount). Si un informe todavía no tiene esas columnas
+// rellenas (creado antes de correr el backfill, o el campo llega vacío
+// por cualquier motivo) cae al criterio antiguo — 1 por sección con
+// enlace — para no mostrar "0" en un informe que sí tiene fotos.
 function rcAttHtml(r) {
-  var n = (r['FOTOS DE OBRA'] ? 1 : 0) + (r['FOTO MATERIALES / RECIBO'] ? 1 : 0);
+  var obraCount = parseInt(r['FOTOS_OBRA_COUNT']);
+  var matCount = parseInt(r['FOTOS_MAT_COUNT']);
+  var n;
+  if (!isNaN(obraCount) || !isNaN(matCount)) {
+    n = (isNaN(obraCount) ? (r['FOTOS DE OBRA'] ? 1 : 0) : obraCount) +
+        (isNaN(matCount) ? (r['FOTO MATERIALES / RECIBO'] ? 1 : 0) : matCount);
+  } else {
+    n = (r['FOTOS DE OBRA'] ? 1 : 0) + (r['FOTO MATERIALES / RECIBO'] ? 1 : 0);
+  }
   if (!n) return '';
   return ' <span class="rc-att"><i class="ti ti-paperclip" aria-hidden="true"></i>' + n + '</span>';
 }
@@ -6651,7 +6697,11 @@ function openManagerDetail(id) {
   var fecha = (r.FECHA ? fmtDate(r.FECHA) : '') + (r.TIMESTAMP ? ' ' + fmtTime(r.TIMESTAMP) : '');
   document.getElementById('mgdTitle').textContent = r.OBRA || '—';
   document.getElementById('mgdSub').textContent = (r.CLIENTE||'') + ' · ' + r.ID + ' · ' + fecha;
-  document.getElementById('mgdBody').innerHTML = buildDetailHtml(r, true, false); // manager: Total sí, tarifa €/h no
+  // Pedido 2026-07-29: el manager ya no ve el Total combinado (materiales+
+  // mano de obra) — solo el coste de materiales, que buildDetailHtml ya
+  // muestra siempre dentro del bloque MATERIALES sin depender de este
+  // parámetro. showTotal:false oculta solo el bloque grande de Total.
+  document.getElementById('mgdBody').innerHTML = buildDetailHtml(r, false, false); // manager: ni Total ni tarifa €/h — solo coste de materiales
   initPhotoThumbs(document.getElementById('mgdBody'));
   // BUG CORREGIDO (latente): antes esta función NUNCA reactivaba
   // .mg-actions por sí misma — dependía por completo de que
@@ -7297,7 +7347,7 @@ function openHistorialDetail(id) {
   document.getElementById('mgdTitle').textContent = r.OBRA || '—';
   document.getElementById('mgdSub').textContent = (r.CLIENTE||'') + ' · ' + r.ID + ' · ' + fecha;
 
-  var html = buildDetailHtml(r, true, false); // manager: Total sí, tarifa €/h no
+  var html = buildDetailHtml(r, false, false); // manager: ni Total ni tarifa €/h — solo coste de materiales (ver openManagerDetail)
   if (!isApproved && r['COMENTARIO_MANAGER']) {
     html += '<div class="mi-comment full" style="margin-top:10px"><b><i class="ti ti-alert-triangle" aria-hidden="true"></i> '+t('lbl_comentario_manager')+'</b>'+r['COMENTARIO_MANAGER']+'</div>';
   }
@@ -8577,6 +8627,10 @@ function renderAnTrend() {
 /* ── Detalle al tocar una plaquita (Trabajadores/Informes/Materiales/Trabajo) ── */
 function openAnDrilldown(tipo) {
   if (tipo === 'informes') { openAnInformesDrilldown(); return; }
+  // Pedido 2026-07-29: arrancar siempre con todo plegado al abrir — ver
+  // el mismo comentario junto a anInformesExpandedKey.
+  anMaterialesExpandedKey = null;
+  anTrabajoExpandedKey = null;
 
   var titles = { trabajadores: t('lbl_trabajadores'), materiales: t('lbl_materiales'), trabajo: t('lbl_trabajo') };
   document.getElementById('anDrilldownTitle').textContent = titles[tipo] || '';
@@ -8608,7 +8662,12 @@ function closeAnDrilldown() {
  * elementos FIJOS fuera de la lista que se re-renderiza (igual que
  * anObjSearch en Objetos) para que escribir no les haga perder el foco. */
 var anInformesDrilldownItems = [];
-var anInformesExpanded = {};
+// Pedido 2026-07-29: acordeón — solo una fila abierta a la vez en toda la
+// lista (abrir otra cierra la anterior), y siempre arranca cerrado al
+// reabrir el desplegable (nunca se guarda entre aperturas). Antes era un
+// objeto {key: bool} donde CUALQUIER fila podía quedar abierta a la vez,
+// y nada lo reiniciaba al cerrar/reabrir el modal.
+var anInformesExpandedKey = null;
 
 function openAnInformesDrilldown() {
   document.getElementById('anDrilldownTitle').textContent = t('an_informes_count');
@@ -8618,7 +8677,7 @@ function openAnInformesDrilldown() {
     var iso = String(r.FECHA || '').substring(0, 10);
     return iso && iso >= range.desde && iso <= range.hasta;
   }).sort(function(a, b) { return String(b.FECHA).localeCompare(String(a.FECHA)); });
-  anInformesExpanded = {};
+  anInformesExpandedKey = null;
 
   var showMonthFilter = anPeriod === 'anio';
   var names = getMonthNames();
@@ -8647,7 +8706,12 @@ function renderAnInformesDrilldownList() {
       if (!parts || String(parts.month) !== monthVal) return false;
     }
     if (searchVal) {
-      var hay = ((r.ID||'') + ' ' + (r.CLIENTE||'') + ' ' + (r.OBRA||'') + ' ' + (r.OPERARIO||'')).toLowerCase();
+      // Pedido 2026-07-29: permitir buscar también por fecha — antes el
+      // buscador solo miraba ID/cliente/obra/operario. Se añade la fecha
+      // en dos formatos (28.07.2026, igual que se ve en pantalla, y la
+      // cruda tal cual llega del backend) para que valga escribir "28.07",
+      // "2026-07-28" o el año suelto, sin tener que adivinar el formato.
+      var hay = ((r.ID||'') + ' ' + (r.CLIENTE||'') + ' ' + (r.OBRA||'') + ' ' + (r.OPERARIO||'') + ' ' + fmtDate(r.FECHA) + ' ' + (r.FECHA||'')).toLowerCase();
       if (hay.indexOf(searchVal) === -1) return false;
     }
     return true;
@@ -8657,7 +8721,7 @@ function renderAnInformesDrilldownList() {
 
   var rowsHtml = filtered.map(function(r, i) {
     var key = String(r.ID || i);
-    var isOpen = !!anInformesExpanded[key];
+    var isOpen = key === anInformesExpandedKey;
     var fecha = r.FECHA ? fmtDate(r.FECHA) : '';
     var total = parseFloat(r.TOTAL) || 0;
     var head = '<div onclick="toggleAnInformeRow(\'' + key.replace(/'/g, "\\'") + '\')" style="display:flex;align-items:center;gap:10px;padding:12px 0;cursor:pointer">' +
@@ -8678,7 +8742,7 @@ function renderAnInformesDrilldownList() {
 }
 
 function toggleAnInformeRow(key) {
-  anInformesExpanded[key] = !anInformesExpanded[key];
+  anInformesExpandedKey = (anInformesExpandedKey === key) ? null : key;
   renderAnInformesDrilldownList();
 }
 
@@ -8737,13 +8801,13 @@ function renderAnDrilldown(tipo, items) {
 }
 
 var anTrabajoDrilldownItems = [];
-var anTrabajoExpanded = {};
+var anTrabajoExpandedKey = null; // acordeón — ver comentario junto a anInformesExpandedKey
 function renderAnTrabajoDrilldownList() {
   var listWrap = document.getElementById('anTrabajoListWrap');
   if (!listWrap) return;
   var rowsHtml = anTrabajoDrilldownItems.map(function(o, i) {
     var key = String(o.id || i);
-    var isOpen = !!anTrabajoExpanded[key];
+    var isOpen = key === anTrabajoExpandedKey;
     var full = isOpen ? anInformeCache.find(function(r){ return String(r.ID) === String(o.id); }) : null;
     var head = '<div onclick="toggleAnTrabajoRow(\'' + key.replace(/'/g, "\\'") + '\')" style="display:flex;align-items:flex-start;padding-top:12px;padding-bottom:12px;cursor:pointer">' +
       '<div class="rbadge"><i class="ti ti-file-text"></i></div>' +
@@ -8763,18 +8827,18 @@ function renderAnTrabajoDrilldownList() {
   initPhotoThumbs(listWrap);
 }
 function toggleAnTrabajoRow(key) {
-  anTrabajoExpanded[key] = !anTrabajoExpanded[key];
+  anTrabajoExpandedKey = (anTrabajoExpandedKey === key) ? null : key;
   renderAnTrabajoDrilldownList();
 }
 
 var anMaterialesDrilldownItems = [];
-var anMaterialesExpanded = {};
+var anMaterialesExpandedKey = null; // acordeón — ver comentario junto a anInformesExpandedKey
 function renderAnMaterialesDrilldownList() {
   var listWrap = document.getElementById('anMaterialesListWrap');
   if (!listWrap) return;
   var rowsHtml = anMaterialesDrilldownItems.map(function(o, i) {
     var key = String(o.id || i);
-    var isOpen = !!anMaterialesExpanded[key];
+    var isOpen = key === anMaterialesExpandedKey;
     var full = isOpen ? anInformeCache.find(function(r){ return String(r.ID) === String(o.id); }) : null;
     var head = '<div onclick="toggleAnMaterialRow(\'' + key.replace(/'/g, "\\'") + '\')" style="display:flex;align-items:flex-start;padding-top:12px;padding-bottom:12px;cursor:pointer">' +
       '<div class="rbadge"><i class="ti ti-package"></i></div>' +
@@ -8795,7 +8859,7 @@ function renderAnMaterialesDrilldownList() {
   initPhotoThumbs(listWrap);
 }
 function toggleAnMaterialRow(key) {
-  anMaterialesExpanded[key] = !anMaterialesExpanded[key];
+  anMaterialesExpandedKey = (anMaterialesExpandedKey === key) ? null : key;
   renderAnMaterialesDrilldownList();
 }
 
@@ -9026,7 +9090,8 @@ function renderGeneratedReportsList() {
       '<div class="adu-card" data-id="' + safeId + '" onclick="window.open(\'' + (r.DRIVE_FILE_URL||'') + '\',\'_blank\')">' +
       '<div class="adu-card-top"><span style="font-size:12px;color:#8e8e93;font-weight:600">' + escapeHtml(String(r.FORMATO||'').toUpperCase()) + '</span>' +
       '<span class="ad-status-badge st-approved">' + escapeHtml(r.ID) + '</span></div>' +
-      '<div class="adu-name">' + escapeHtml(periodo) + '</div>' +
+      '<div class="adu-name">' + t('rg_numero_informe') + ': ' + escapeHtml(r.ID) + '</div>' +
+      '<div class="adu-meta"><i class="ti ti-calendar"></i>' + t('rg_periodo') + ': ' + escapeHtml(periodo) + '</div>' +
       '<div class="adu-meta"><i class="ti ti-user"></i>' + escapeHtml(r.CREADO_POR||'') + '</div>' +
       '</div></div>';
   }).join('');
@@ -11365,6 +11430,7 @@ function reportsSignature(reports) {
 }
 var lastMyReportsSig = null;
 var lastMgQueueSig = null;
+var lastAdJournalSig = null;
 
 /* --- MANAGER: nuevos informes pendientes --- */
 function checkManagerNotifications() {
@@ -11428,6 +11494,26 @@ function checkAdminNotifications() {
       }
       updateAppIconBadge(pendingUnseen.length);
       updateBellUI(); // resincroniza el badge de la campana en cada sondeo, no solo cuando llega algo nuevo
+
+      // BUG CORREGIDO (2026-07-29, "borro una fila a mano en la hoja y no
+      // desaparece de la app"): a diferencia de checkWorkerNotifications/
+      // checkManagerNotifications (que ya comparan una firma barata y
+      // vuelven a pintar su lista si cambió), esta función nunca
+      // actualizaba adAllRecords ni volvía a llamar a applyAdminFilters()
+      // — el Diario del admin solo se refrescaba de verdad al cambiar de
+      // pestaña (loadAdminData). Con la pestaña ya abierta, una fila
+      // borrada a mano en la hoja (o cualquier otro cambio ajeno a "nuevo
+      // informe"/badge) se quedaba visible hasta que el admin saliera y
+      // volviera a entrar. Mismo patrón que los otros dos roles.
+      var sigNowAd = reportsSignature(reports);
+      if (adAllRecords.length && sigNowAd !== lastAdJournalSig) {
+        lastAdJournalSig = sigNowAd;
+        adAllRecords = capReports(reports.slice().sort(function(a, b) {
+          return new Date(b.TIMESTAMP||0) - new Date(a.TIMESTAMP||0);
+        }));
+        dataCacheSet('adminStats', reports);
+        applyAdminFilters();
+      }
     })
     .catch(function(){});
 }
