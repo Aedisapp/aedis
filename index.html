@@ -94,7 +94,17 @@ if ('serviceWorker' in navigator) {
         // service worker, en la raíz, con un único scope que cubre toda
         // la app (ver OneSignalSDKWorker.js: combina el push de OneSignal
         // con la lógica de cache-busting que antes vivía en sw.js aparte).
-        serviceWorkerPath: "OneSignalSDKWorker.js",
+        // Pedido 2026-07-30: encontrado en vivo (alert de diagnóstico
+        // temporal, ver ensureNotifyPermission) que el SDK intentaba
+        // cargar el worker desde la RAÍZ del dominio (aedisapp.github.io/
+        // OneSignalSDKWorker.js) en vez de desde /aedis/ — 404, el SDK
+        // nunca terminaba de inicializar y por eso NUNCA aparecía ni el
+        // banner ni el prompt nativo de notificaciones, en ningún
+        // dispositivo. Una ruta relativa depende de cómo el SDK resuelva
+        // "dónde estamos" en ese momento (redirects, service workers
+        // previos ya registrados, etc.) — una ruta ABSOLUTA no depende de
+        // nada de eso, elimina la ambigüedad de raíz.
+        serviceWorkerPath: "/aedis/OneSignalSDKWorker.js",
         serviceWorkerParam: { scope: "/aedis/" },
         // FIX REAL (confirmado en la documentación oficial de OneSignal
         // Web SDK v16 y en un issue reportado del propio SDK): dejar
