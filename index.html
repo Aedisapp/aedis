@@ -2941,11 +2941,6 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
     </div>
     <div id="anObjectsList" style="padding:0 14px 16px"></div>
 
-    <!-- Alertas breves de actividad — solo aparece si hay algo que avisar
-         (objetos con más de 30 días sin informes nuevos), ver
-         renderAnAlertas(). Vacío no ocupa espacio ni título propio. -->
-    <div id="anAlertasWrap"></div>
-
     <!-- Top del período — opcional/plegable, colapsado por defecto (pedido
          explícito). Se calcula a partir de datos que ya se piden para
          otras partes de la pantalla (objetos/drilldown), sin endpoint nuevo. -->
@@ -3341,7 +3336,6 @@ var LANGS = {
     an_periodo_hoy:'Hoy', an_periodo_semana:'Esta semana', an_periodo_mes:'Este mes', an_periodo_anio:'Este año', an_periodo_mes_pasado:'Mes pasado', an_periodo_personalizado:'Personalizado',
     an_tendencia_titulo:'Tendencia — Total', an_top_titulo:'Top del período',
     an_top_objetos:'Objetos', an_top_trabajadores:'Trabajadores', an_top_companias:'Compañías', an_sin_compania:'Sin compañía',
-    an_sin_actividad:'Sin informes nuevos desde hace {dias} días',
     an_todos:'Todos', an_por_objeto:'Por objeto', an_por_trabajador:'Por trabajador', an_mes:'Mes', an_turnos:'Informes', an_horas:'Horas', an_sin_datos:'No hay datos aprobados en el período seleccionado', an_buscar_placeholder:'Buscar objeto o cliente...', an_comprado_por:'Comprado por',
     rb_title:'Crear informe', rb_step_formato:'Formato del archivo', rb_formato_pdf:'PDF', rb_formato_excel:'Excel',
     rb_step_periodo:'Período del informe', rb_step_objetos:'Objetos a incluir', rb_objetos_empty:'No hay objetos con datos en este período', rb_objetos_requerido:'Elige al menos un objeto para continuar',
@@ -3461,7 +3455,6 @@ var LANGS = {
     an_periodo_hoy:'Сегодня', an_periodo_semana:'Эта неделя', an_periodo_mes:'Этот месяц', an_periodo_anio:'Этот год', an_periodo_mes_pasado:'Прошлый месяц', an_periodo_personalizado:'Свой период',
     an_tendencia_titulo:'Тренд — Итого', an_top_titulo:'Топ за период',
     an_top_objetos:'Объекты', an_top_trabajadores:'Рабочие', an_top_companias:'Компании', an_sin_compania:'Без компании',
-    an_sin_actividad:'Нет новых отчётов уже {dias} дн.',
     an_todos:'Все', an_por_objeto:'По объекту', an_por_trabajador:'По рабочему', an_mes:'Месяц', an_turnos:'Отчётов', an_horas:'Часов', an_sin_datos:'Нет согласованных данных за выбранный период', an_buscar_placeholder:'Поиск объекта или клиента...', an_comprado_por:'Купил',
     rb_title:'Создать отчёт', rb_step_formato:'Формат файла', rb_formato_pdf:'PDF', rb_formato_excel:'Excel',
     rb_step_periodo:'Период отчёта', rb_step_objetos:'Объекты для отчёта', rb_objetos_empty:'Нет данных по объектам за этот период', rb_objetos_requerido:'Выберите хотя бы один объект, чтобы продолжить',
@@ -3581,7 +3574,6 @@ var LANGS = {
     an_periodo_hoy:'Today', an_periodo_semana:'This week', an_periodo_mes:'This month', an_periodo_anio:'This year', an_periodo_mes_pasado:'Last month', an_periodo_personalizado:'Custom',
     an_tendencia_titulo:'Trend — Total', an_top_titulo:'Top for the period',
     an_top_objetos:'Objects', an_top_trabajadores:'Workers', an_top_companias:'Companies', an_sin_compania:'No company',
-    an_sin_actividad:'No new reports for {dias} days',
     an_todos:'All', an_por_objeto:'By object', an_por_trabajador:'By worker', an_mes:'Month', an_turnos:'Reports', an_horas:'Hours', an_sin_datos:'No approved data in the selected period', an_buscar_placeholder:'Search object or client...', an_comprado_por:'Purchased by',
     rb_title:'Create report', rb_step_formato:'File format', rb_formato_pdf:'PDF', rb_formato_excel:'Excel',
     rb_step_periodo:'Report period', rb_step_objetos:'Objects to include', rb_objetos_empty:'No data for any object in this period', rb_objetos_requerido:'Pick at least one object to continue',
@@ -6909,9 +6901,22 @@ function requestSwipeDeleteAdmin(id) {
   var ACTION_W = 84;
   var startX = 0, startY = 0, baseX = 0, dragging = null, locked = null, openEl = null;
   var hasDelete = false, hasEdit = false;
+  // Pedido 2026-07-30 (regresión encontrada tras el cambio de rendimiento
+  // de esa misma fecha): el frame de requestAnimationFrame agendado por el
+  // ÚLTIMO touchmove podía llegar a pintarse DESPUÉS de que touchend ya
+  // hubiera fijado la posición final (abierta/cerrada) — resultado: la
+  // tarjeta "saltaba" de vuelta a la posición de arrastre justo tras
+  // soltar el dedo (el "freeze/salto" reportado). rafHandle guarda el id
+  // para poder cancelarlo con cancelAnimationFrame() en cuanto el gesto
+  // termina o se cierra la tarjeta desde otro sitio.
+  var rafHandle = null;
+  function cancelPendingSwipeFrame() {
+    if (rafHandle !== null) { cancelAnimationFrame(rafHandle); rafHandle = null; }
+  }
 
   function closeSwipeDelete() {
     if (openEl) {
+      cancelPendingSwipeFrame();
       var card = openEl.querySelector('.mi-card,.mg-card,.ad-card,.adu-card');
       if (card) card.style.transform = '';
       openEl.classList.remove('swipe-open-left', 'swipe-open-right');
@@ -6923,6 +6928,7 @@ function requestSwipeDeleteAdmin(id) {
   document.addEventListener('touchstart', function (e) {
     var wrap = e.target.closest && e.target.closest('.swipe-wrap');
     if (openEl && openEl !== wrap) closeSwipeDelete();
+    cancelPendingSwipeFrame();
     dragging = wrap;
     locked = null;
     if (!wrap) return;
@@ -6938,12 +6944,14 @@ function requestSwipeDeleteAdmin(id) {
   // Pedido 2026-07-30 (auditoría de rendimiento): la escritura de estilo
   // (card.style.transform) ya no ocurre directamente dentro del handler
   // de touchmove — se guarda el último valor calculado y se aplica una
-  // sola vez por frame vía requestAnimationFrame (rafScheduled evita
-  // apilar frames si llegan varios eventos touchmove antes del repintado).
-  // No cambia el gesto en absoluto, solo agrupa las escrituras al DOM.
-  var rafScheduled = false, pendingCard = null, pendingNext = 0;
+  // sola vez por frame vía requestAnimationFrame (rafHandle evita apilar
+  // frames si llegan varios eventos touchmove antes del repintado, y
+  // permite cancelarlo — ver cancelPendingSwipeFrame — para no pisar la
+  // posición final que fija touchend/closeSwipeDelete). No cambia el
+  // gesto en absoluto, solo agrupa las escrituras al DOM.
+  var pendingCard = null, pendingNext = 0;
   function flushSwipeFrame() {
-    rafScheduled = false;
+    rafHandle = null;
     if (pendingCard) pendingCard.style.transform = 'translateX(' + pendingNext + 'px)';
   }
 
@@ -6962,12 +6970,13 @@ function requestSwipeDeleteAdmin(id) {
       dragging.dataset.dragX = next;
       pendingCard = dragging.querySelector('.mi-card,.mg-card,.ad-card,.adu-card');
       pendingNext = next;
-      if (!rafScheduled) { rafScheduled = true; requestAnimationFrame(flushSwipeFrame); }
+      if (rafHandle === null) { rafHandle = requestAnimationFrame(flushSwipeFrame); }
     }
   }, { passive: false });
 
   document.addEventListener('touchend', function () {
     if (!dragging) return;
+    cancelPendingSwipeFrame();
     var card = dragging.querySelector('.mi-card,.mg-card,.ad-card,.adu-card');
     if (card) card.style.transition = '';
     if (locked === 'x') {
@@ -8963,46 +8972,6 @@ function renderAnObjectsList() {
  * "editar" reabre el mismo asistente (openReportBuilder) precargado con
  * los valores de esa fila, ya que el archivo en sí no se puede editar
  * una vez generado — solo regenerar con nuevos parámetros. */
-/* ── Alertas breves: objetos que llevan más de 30 días sin un informe
- * nuevo (pedido: "última actividad, kratko"). Se calcula sobre TODO
- * anInformeCache (histórico completo, no solo el período elegido —
- * un objeto sin actividad en el período ni siquiera aparecería en
- * anObjectsCache, así que hay que mirar más atrás para detectarlo de
- * verdad), buscando la fecha más reciente por cliente::obra. Tope de
- * 180 días para no sacar objetos ya claramente cerrados/históricos, y
- * de 2 objetos para que sea realmente "breve". Ningún endpoint nuevo. */
-function renderAnAlertas() {
-  var wrap = document.getElementById('anAlertasWrap');
-  if (!wrap) return;
-  var lastByObj = {};
-  anInformeCache.forEach(function(r) {
-    var parts = isoDateParts(r.FECHA);
-    if (!parts) return;
-    var iso = String(r.FECHA).substring(0, 10);
-    var key = (r.CLIENTE || '') + '::' + (r.OBRA || '');
-    if (!key.trim() || key === '::') return;
-    if (!lastByObj[key] || iso > lastByObj[key].iso) lastByObj[key] = { iso: iso, cliente: r.CLIENTE, obra: r.OBRA };
-  });
-  var hoyIso = anISO(new Date());
-  var stale = Object.keys(lastByObj).map(function(k){ return lastByObj[k]; })
-    .map(function(o) {
-      var dias = Math.round((new Date(hoyIso) - new Date(o.iso)) / 86400000);
-      return { obra: o.obra, cliente: o.cliente, dias: dias };
-    })
-    .filter(function(o){ return o.dias >= 30 && o.dias <= 180; })
-    .sort(function(a, b){ return b.dias - a.dias; })
-    .slice(0, 2);
-
-  if (!stale.length) { wrap.innerHTML = ''; return; }
-  wrap.innerHTML = stale.map(function(o) {
-    return '<div style="display:flex;gap:10px;background:#fff8ec;border:.5px solid #f5e2bb;border-radius:12px;padding:11px 12px;margin:0 14px 8px">' +
-      '<i class="ti ti-alert-triangle" style="font-size:16px;color:#b8790a;flex-shrink:0;margin-top:1px" aria-hidden="true"></i>' +
-      '<div><b style="display:block;font-size:12.5px;color:#000;margin-bottom:2px">' + escapeHtml(o.obra || o.cliente) + '</b>' +
-      '<span style="font-size:11.5px;color:#8e8e93">' + t('an_sin_actividad').replace('{dias}', o.dias) + '</span></div>' +
-    '</div>';
-  }).join('');
-}
-
 /* ── Top del período: objetos/trabajadores/compañías, plegable y
  * colapsado por defecto (pedido explícito). Reaprovecha datos que ya se
  * piden en otras partes de la pantalla — objetos de anObjectsCache
@@ -9444,7 +9413,6 @@ function loadAnalisis() {
       }
       anInformeCache = result.data || [];
       renderAnalisis();
-      renderAnAlertas();
       loadAnalyticsDynamic(); // recalcula con los datos frescos — ver comentario junto a su definición (todo el resumen dinámico ahora es puramente local, sin red)
     })
     .catch(function(){
