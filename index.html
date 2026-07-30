@@ -1017,7 +1017,17 @@ body.pin-mode{overflow:hidden}
    el botón de eliminar tiene su propio border-radius a juego con el de
    la tarjeta (ver .swipe-delete-action), así que no hay ninguna esquina
    cuadrada que ocultar sin necesidad de overflow:hidden. */
-.swipe-wrap{position:relative;margin:0 16px 10px}
+/* Pedido 2026-07-30 (auditoría de rendimiento): touch-action:pan-y le dice
+   al navegador que el eje VERTICAL de este elemento es scroll nativo suyo
+   — puede empezar el scroll con motor propio (compositor) sin esperar a
+   que nuestro listener de touchmove (necesariamente {passive:false} para
+   poder bloquear el swipe horizontal) decida si va a llamar
+   preventDefault(). Sin esto, CADA toque que empieza sobre una tarjeta
+   (osea, casi cualquier scroll de una lista) obligaba al navegador a
+   consultar a JS antes de poder scrollear — la causa más probable del
+   "scroll pesado" reportado. No cambia el gesto horizontal en sí (sigue
+   funcionando exactamente igual, ver el IIFE de SWIPE-TO-DELETE). */
+.swipe-wrap{position:relative;margin:0 16px 10px;touch-action:pan-y}
 .swipe-wrap.r12{margin:0 16px 8px}
 .swipe-wrap>.mi-card,.swipe-wrap>.mg-card,.swipe-wrap>.ad-card,.swipe-wrap>.adu-card{margin:0;position:relative;z-index:1;transition:transform .25s cubic-bezier(.25,.1,.25,1)}
 /* Acciones de swipe (2026-07-21): chip flotante, separado de la
@@ -2442,7 +2452,7 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
       <div style="display:flex;gap:8px;align-items:center">
         <div style="flex:1;position:relative">
           <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:#8e8e93;fill:none;stroke-width:2;stroke-linecap:round;pointer-events:none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="opSearch" placeholder="Buscar..." oninput="applyOpFilters()"
+          <input type="text" id="opSearch" placeholder="Buscar..." oninput="applyOpFiltersDebounced()"
             style="width:100%;padding:9px 12px 9px 33px;border-radius:12px;border:none;background:#f2f2f7;font-family:inherit;font-size:14px;color:#000;outline:none">
         </div>
         <button onclick="toggleOpFilters()" id="opFilterToggle"
@@ -2549,7 +2559,7 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
     <div style="display:flex;gap:8px;align-items:center">
       <div style="flex:1;position:relative">
         <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:#8e8e93;fill:none;stroke-width:2;stroke-linecap:round;pointer-events:none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="mgSearch" placeholder="Buscar..." oninput="applyMgFilters()"
+        <input type="text" id="mgSearch" placeholder="Buscar..." oninput="applyMgFiltersDebounced()"
           style="width:100%;padding:9px 12px 9px 33px;border-radius:12px;border:none;background:#f2f2f7;font-family:inherit;font-size:14px;color:#000;outline:none">
       </div>
       <button onclick="toggleMgFilters()" id="mgFilterToggle"
@@ -2766,7 +2776,7 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
     <div style="display:flex;gap:8px;align-items:center">
       <div style="flex:1;position:relative">
         <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:#8e8e93;fill:none;stroke-width:2;stroke-linecap:round;pointer-events:none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="adSearch" placeholder="Buscar..." oninput="applyAdminFilters()"
+        <input type="text" id="adSearch" placeholder="Buscar..." oninput="applyAdminFiltersDebounced()"
           style="width:100%;padding:9px 12px 9px 33px;border-radius:12px;border:none;background:#f2f2f7;font-family:inherit;font-size:14px;color:#000;outline:none">
       </div>
       <button onclick="toggleAdFilters()" id="adFilterToggle"
@@ -3004,7 +3014,7 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
     <div style="padding:10px 14px 6px">
       <div style="flex:1;position:relative">
         <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:#8e8e93;fill:none;stroke-width:2;stroke-linecap:round;pointer-events:none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="adUsSearch" oninput="renderAdminUsers()"
+        <input type="text" id="adUsSearch" oninput="renderAdminUsersDebounced()"
           style="width:100%;padding:9px 12px 9px 33px;border-radius:12px;border:none;background:#f2f2f7;font-family:inherit;font-size:14px;color:#000;outline:none">
       </div>
       <div style="display:flex;gap:6px;margin-top:10px" id="adUsStatusFilters">
@@ -6925,6 +6935,18 @@ function requestSwipeDeleteAdmin(id) {
     if (card) card.style.transition = 'none';
   }, { passive: true });
 
+  // Pedido 2026-07-30 (auditoría de rendimiento): la escritura de estilo
+  // (card.style.transform) ya no ocurre directamente dentro del handler
+  // de touchmove — se guarda el último valor calculado y se aplica una
+  // sola vez por frame vía requestAnimationFrame (rafScheduled evita
+  // apilar frames si llegan varios eventos touchmove antes del repintado).
+  // No cambia el gesto en absoluto, solo agrupa las escrituras al DOM.
+  var rafScheduled = false, pendingCard = null, pendingNext = 0;
+  function flushSwipeFrame() {
+    rafScheduled = false;
+    if (pendingCard) pendingCard.style.transform = 'translateX(' + pendingNext + 'px)';
+  }
+
   document.addEventListener('touchmove', function (e) {
     if (!dragging) return;
     var dx = e.touches[0].clientX - startX;
@@ -6937,9 +6959,10 @@ function requestSwipeDeleteAdmin(id) {
       var min = hasDelete ? -ACTION_W : 0;
       var max = hasEdit ? ACTION_W : 0;
       var next = Math.max(min, Math.min(max, baseX + dx));
-      var card = dragging.querySelector('.mi-card,.mg-card,.ad-card,.adu-card');
-      if (card) card.style.transform = 'translateX(' + next + 'px)';
       dragging.dataset.dragX = next;
+      pendingCard = dragging.querySelector('.mi-card,.mg-card,.ad-card,.adu-card');
+      pendingNext = next;
+      if (!rafScheduled) { rafScheduled = true; requestAnimationFrame(flushSwipeFrame); }
     }
   }, { passive: false });
 
@@ -9599,6 +9622,30 @@ function escapeHtml(s) {
   });
 }
 
+// Pedido 2026-07-30 (auditoría de rendimiento): los 4 buscadores de texto
+// (Mis informes/Manager/Admin/Usuarios) llamaban a su función de filtro
+// en CADA pulsación de tecla — cada llamada reconstruye la lista entera
+// (innerHTML) de golpe, sin ninguna espera. Con 100 registros en pantalla
+// (tope real, ver capReports/MAX_CACHED_REPORTS) esto no revienta nada,
+// pero sí puede notarse como lag al escribir rápido, sobre todo en un
+// móvil más antiguo — el mismo problema que ya se arregló para el sondeo
+// automático de 10s (ver reportsSignature), pero nunca se extendió aquí.
+// debounce() espera a que el usuario deje de teclear (250ms) antes de
+// filtrar/repintar — no cambia NINGÚN resultado de búsqueda, solo cuándo
+// se pinta.
+function debounce(fn, waitMs) {
+  var timer = null;
+  return function() {
+    var args = arguments, ctx = this;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(function() { fn.apply(ctx, args); }, waitMs);
+  };
+}
+var applyOpFiltersDebounced = debounce(function(){ applyOpFilters(); }, 250);
+var applyMgFiltersDebounced = debounce(function(){ applyMgFilters(); }, 250);
+var applyAdminFiltersDebounced = debounce(function(){ applyAdminFilters(); }, 250);
+var renderAdminUsersDebounced = debounce(function(){ renderAdminUsers(); }, 250);
+
 var adUsersAll = [];
 var adUsStatusFilter = '';
 var adUmCurrentUser = null;
@@ -10911,9 +10958,15 @@ function renderPhotoThumbsInto(container, photos, folderUrl, label) {
   container._pgPhotos = photos;
   container._pgFolderUrl = folderUrl;
   var shown = photos.slice(0, 5);
+  // Pedido 2026-07-30 (auditoría de rendimiento): estas miniaturas son
+  // cuadraditos de 56×56px, pero `url` llega en tamaño w2000 (pensado
+  // para el visor a pantalla completa, ver pgThumbUrl más abajo) — sin
+  // esto, abrir un informe con fotos descargaba varias imágenes enormes
+  // solo para pintar puntos diminutos. Reutiliza el mismo pgThumbUrl()
+  // que ya soluciona esto para el carrete de la galería.
   var thumbsHtml = shown.map(function(url) {
     return '<div onclick="openPhotoGalleryFromThumbs(this)" style="width:56px;height:56px;border-radius:10px;overflow:hidden;flex-shrink:0;cursor:pointer;background:#f2f2f7">' +
-      '<img src="' + url + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;-webkit-user-select:none;user-select:none" draggable="false"></div>';
+      '<img src="' + pgThumbUrl(url) + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;-webkit-user-select:none;user-select:none" draggable="false"></div>';
   }).join('');
   container.innerHTML =
     '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:6px">' + escapeHtml(label) + '</div>' +
