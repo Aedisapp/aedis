@@ -141,8 +141,13 @@ if ('serviceWorker' in navigator) {
       OneSignal.Notifications.addEventListener('click', function(event) {
         try {
           var data = event && event.notification && event.notification.additionalData;
+          if (data && data.reportIds) {
+            openDeletedReportsModal(data.reportIds.split(',').filter(function(x){ return x; }));
+            return;
+          }
           var id = data && data.reportId;
           if (!id) return;
+          if (data.mode === 'deleted') { openDeletedReportsModal([id]); return; }
           openReportById(id, data.mode || 'view');
         } catch(e) { console.log('[OneSignal] click handler error:', e && e.message); }
       });
@@ -1198,7 +1203,7 @@ body.pin-mode{overflow:hidden}
 .rd-field-lg b{display:block;color:#0049c5;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.4px;margin-bottom:6px}
 .rd-field-lg span{display:block;color:#000;font-weight:700;font-size:30px;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
 .rd-field-lg small{display:block;font-size:11px;font-weight:600;color:#8e8e93;margin-top:4px}
-.rd-field-full{background:#f4f4f7;border-radius:14px;padding:12px 13px;margin-bottom:8px}
+.rd-field-full{background:#f4f4f7;border-radius:14px;padding:12px 13px;margin-bottom:8px;overflow-wrap:anywhere}
 .rd-text{background:#f4f4f7;border-radius:14px;padding:12px 13px;font-size:13px;color:#111;line-height:1.5;margin-bottom:8px}
 .rd-text b{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.3px;color:#9a9a9e;margin-bottom:4px;font-weight:700}
 .rd-photo-link{display:flex;align-items:center;justify-content:center;gap:6px;background:#f4f4f7;border:none;border-radius:999px;padding:12px;font-size:13px;font-weight:700;color:#0049c5;text-decoration:none;margin-top:6px;width:100%;font-family:inherit;cursor:pointer;touch-action:manipulation}
@@ -1431,8 +1436,20 @@ body.pin-mode{overflow:hidden}
 // porque en el arranque en frío de una PWA standalone
 // window.screen.height a veces tarda uno o dos frames en estabilizarse.
 (function () {
+  // BUG CORREGIDO (2026-07-30, dato real de dispositivo vía panel
+  // ?debug=layout): este mecanismo asumía que window.screen.height
+  // SIEMPRE es >= window.innerHeight (el caso que motivó el fix de
+  // 2026-07-17). En un dispositivo real se midió lo contrario:
+  // innerHeight=932 pero screen.height=852 — forzar html/body a 852px
+  // dejaba el .bottom-tabbar (anclado al fondo de ese body) 80px por
+  // encima del borde real de pantalla, visible como franja negra debajo
+  // del tabbar en las 4 pestañas. Se usa el mayor de los dos valores:
+  // cubre tanto "innerHeight se queda corto" (caso original) como
+  // "screen.height se queda corto" (este caso nuevo).
   function applyRealHeight() {
     var h = window.screen && window.screen.height;
+    var vh = window.innerHeight;
+    if (vh && (!h || vh > h)) h = vh;
     if (!h || h < 200) return; // valor no fiable todavía, no lo usamos
     var px = h + 'px';
     document.documentElement.style.height = px;
@@ -2750,6 +2767,32 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
         <i class="ti ti-upload" style="font-size:16px"></i> <span id="rdShareBtnLbl">Compartir</span>
       </button>
     </div>
+  </div>
+</div>
+
+
+<!-- MODAL: INFORME(S) ELIMINADO(S) — pedido 2026-07-30. Abre desde el
+     deep-link de las notificaciones de borrado (deleteRecord, mode
+     "deleted"; y onSheetChangeAedis, borrado manual en la hoja). Vista
+     de solo lectura independiente de reportDetailModal/mgDetailModal/
+     adAdminDetailModal a propósito: un registro STATUS=deleted (o ya
+     desaparecido de la hoja del todo) no está cacheado en ninguna de las
+     listas normales por rol (myReportsCache/mgHistorialCache/adAllRecords
+     lo excluyen todas), así que reutilizar esas pantallas obligaría a
+     enseñarles a cargar también informes borrados — ver getReportsByIds
+     en Code_v5.gs para el porqué de un endpoint aparte. -->
+<div class="mg-modal-overlay fullbleed" id="delRepModal" onclick="if(event.target===this)closeDeletedReportsModal()">
+  <div class="mg-modal" style="height:100%;max-height:100%;border-radius:0;overflow:hidden;display:flex;flex-direction:column;padding:0">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 20px) 18px 12px;border-bottom:.5px solid #f0f0f0;flex-shrink:0">
+      <div style="min-width:0">
+        <div class="mg-modal-title" id="delRepTitle">Informe eliminado</div>
+        <div class="mg-modal-sub" id="delRepSub">—</div>
+      </div>
+      <button type="button" onclick="closeDeletedReportsModal()" aria-label="Cerrar" style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:#f2f2f7;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation">
+        <i class="ti ti-x" style="font-size:19px;color:#000"></i>
+      </button>
+    </div>
+    <div id="delRepBody" style="overflow-y:auto;overflow-x:hidden;touch-action:pan-y;flex:1;padding:14px 18px;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain"></div>
   </div>
 </div>
 
@@ -10867,12 +10910,79 @@ function openReportById(id, mode) {
 function tryOpenDeepLinkedReport() {
   if (deepLinkHandled || !currentUser) return;
   var params = new URLSearchParams(window.location.search);
+  var listParam = params.get('openReportList');
   var id = params.get('openReport');
-  if (!id) return;
+  if (!listParam && !id) return;
   var mode = params.get('mode') || 'view';
   deepLinkHandled = true;
   try { window.history.replaceState({}, '', window.location.pathname); } catch(e) {}
+  if (listParam) { openDeletedReportsModal(listParam.split(',').filter(function(x){ return x; })); return; }
+  if (mode === 'deleted') { openDeletedReportsModal([id]); return; }
   openReportById(id, mode);
+}
+
+function closeDeletedReportsModal() {
+  var m = document.getElementById('delRepModal');
+  if (m) m.classList.remove('show');
+}
+
+// Vista de solo lectura para las notificaciones de borrado (ver
+// getReportsByIds en Code_v5.gs). ids: array de 1 o más IDs — un solo id
+// puede venir de deleteRecord (STATUS=deleted, la fila sigue existiendo)
+// o de un borrado manual en la hoja (la fila ya no existe: el backend
+// simplemente no la encuentra y aparece en "missing" más abajo).
+function openDeletedReportsModal(ids) {
+  ids = (ids || []).filter(function(x){ return x; });
+  if (!ids.length || !currentUser) return;
+  var modal = document.getElementById('delRepModal');
+  var titleEl = document.getElementById('delRepTitle');
+  var subEl = document.getElementById('delRepSub');
+  var body = document.getElementById('delRepBody');
+  if (!modal || !body) return;
+
+  titleEl.textContent = ids.length === 1 ? 'Informe eliminado' : 'Informes eliminados';
+  subEl.textContent = ids.length === 1 ? ids[0] : (ids.length + ' informes');
+  body.innerHTML = '<div style="text-align:center;padding:30px 0;color:#8e8e93">Cargando…</div>';
+  modal.classList.add('show');
+
+  fetch(WEBAPP_URL + '?action=getReportsByIds&codigo=' + encodeURIComponent(currentPin) + '&ids=' + encodeURIComponent(ids.join(',')) + '&t=' + Date.now())
+    .then(function(resp){ return resp.json(); })
+    .then(function(result){
+      if (!modal.classList.contains('show')) return; // se cerró mientras cargaba
+      var found = (result && result.status === 'ok') ? (result.data || []) : [];
+      var foundIds = found.map(function(r){ return r.ID; });
+      var showTotal = currentUser.rol === 'admin';
+      var html = '';
+      found.forEach(function(r){
+        html += '<div style="border-bottom:.5px solid #f0f0f0;padding:14px 0">';
+        html += '<div style="font-weight:700;font-size:15px">' + escapeHtml(r.ID || '') + '</div>';
+        var line = [];
+        if (r.FECHA) line.push(fmtDate(r.FECHA));
+        if (r.CLIENTE) line.push(escapeHtml(r.CLIENTE));
+        if (r.OBRA) line.push(escapeHtml(r.OBRA));
+        if (line.length) html += '<div style="color:#666;font-size:13px;margin-top:2px">' + line.join(' · ') + '</div>';
+        var who = [];
+        if (r.OPERARIO) who.push(escapeHtml(r.OPERARIO));
+        if (r.TIPO) who.push(escapeHtml(r.TIPO));
+        if (who.length) html += '<div style="color:#666;font-size:13px;margin-top:2px">' + who.join(' · ') + '</div>';
+        if (showTotal && r.TOTAL && parseFloat(r.TOTAL) > 0) {
+          html += '<div style="font-weight:700;color:#22b862;margin-top:4px">' + parseFloat(r.TOTAL).toFixed(2) + ' €</div>';
+        }
+        if (r.MANAGER_NOMBRE) {
+          html += '<div style="font-size:12px;color:#8e8e93;margin-top:4px">Eliminado por ' + escapeHtml(r.MANAGER_NOMBRE) + '</div>';
+        }
+        html += '</div>';
+      });
+      var missing = ids.filter(function(id){ return foundIds.indexOf(id) === -1; });
+      if (missing.length) {
+        html += '<div style="padding:14px 0;color:#8e8e93;font-size:13px">Ya no disponible(s) — borrado(s) por completo de la hoja: ' + missing.map(function(id){ return escapeHtml(id); }).join(', ') + '</div>';
+      }
+      if (!html) html = '<div style="text-align:center;padding:30px 0;color:#8e8e93">No hay datos disponibles.</div>';
+      body.innerHTML = html;
+    })
+    .catch(function(){
+      body.innerHTML = '<div style="text-align:center;padding:30px 0;color:#8e8e93">Error al cargar.</div>';
+    });
 }
 
 function openNotifModal() {
