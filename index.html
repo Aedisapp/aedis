@@ -138,6 +138,9 @@ if ('serviceWorker' in navigator) {
       });
     } catch(err) {
       console.log('[OneSignal] init FAILED:', err && err.message);
+      // Temporal (2026-07-30) — ver el comentario junto a _debugNotifyState():
+      // sin esto, un fallo aquí es invisible en un iPhone real (no hay consola).
+      try { alert('[OneSignal] init FAILED: ' + (err && err.message)); } catch(e2) {}
     }
   });
 </script>
@@ -10346,6 +10349,9 @@ function waitForOneSignal(callback, retriesLeft) {
   }
   if (retriesLeft <= 0) {
     console.log('[OneSignal] SDK no llegó a inicializar tras esperar');
+    // Temporal (2026-07-30) — ver _debugNotifyState(): sin esto, este
+    // timeout es invisible en un iPhone real (no hay consola a mano).
+    try { alert('[OneSignal] el SDK no llegó a inicializar tras ~10s de espera (window.__oneSignalReady sigue false).'); } catch(e) {}
     return;
   }
   setTimeout(function() { waitForOneSignal(callback, retriesLeft - 1); }, 500);
@@ -10409,7 +10415,30 @@ function isStandalonePWA() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 
+// Pedido 2026-07-30 (temporal, para depurar "el banner de notificaciones
+// nunca aparece" cuando el gesto de 5 toques tampoco es fiable en el
+// dispositivo real): muestra SIEMPRE, sin ningún gesto especial, el
+// estado exacto justo al entrar a ensureNotifyPermission() — de dónde
+// sale (o no) cada rama de la función. QUITAR este alert() en cuanto se
+// identifique la causa real; no es una función permanente de la app.
+function _debugNotifyState(label) {
+  try {
+    var lines = [
+      label,
+      'Notification in window: ' + ('Notification' in window),
+      'Notification.permission: ' + (('Notification' in window) ? Notification.permission : 'n/a'),
+      'notifyPermissionAsked: ' + notifyPermissionAsked,
+      'isIOSDevice(): ' + isIOSDevice(),
+      'isStandalonePWA(): ' + isStandalonePWA(),
+      'typeof OneSignal: ' + (typeof OneSignal),
+      'window.__oneSignalReady: ' + !!window.__oneSignalReady
+    ];
+    alert(lines.join('\n'));
+  } catch (e) { alert('_debugNotifyState error: ' + e.message); }
+}
+
 function ensureNotifyPermission() {
+  _debugNotifyState('ensureNotifyPermission() — estado al entrar');
   if (!('Notification' in window)) return; // navegador sin soporte — no insistimos
   if (notifyPermissionAsked) return;
   if (Notification.permission !== 'default') return; // ya concedido o denegado
