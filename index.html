@@ -12166,24 +12166,27 @@ if ('serviceWorker' in navigator) {
   });
 
   // ═══ ACCESO A diagnosePush() DESDE LA UI ═══
-  // 5 toques rápidos (menos de 2s entre cada uno) sobre el título de la
-  // barra superior ("AEDIS" / "PARTE DE TRABAJO" / etc.) lanzan el
-  // autodiagnóstico de push. Sin esto, en iPhone sin Mac cerca es
-  // imposible ejecutar diagnosePush() manualmente (no hay consola).
-  // BUG CORREGIDO: un <div> normal (sin cursor:pointer ni onclick inline)
-  // no dispara el evento "click" de forma fiable ante un toque en Safari
-  // iOS — es un comportamiento documentado de WebKit. Por eso los toques
-  // no hacían nada. Ahora escuchamos "touchend" además de "click" (con
-  // guarda para no contar doble el mismo toque en navegadores que sí
-  // disparan ambos) y forzamos cursor:pointer para máxima compatibilidad.
+  // Pedido 2026-07-30: el gatillo anterior (5 toques sobre el nombre en
+  // navTitle) resultó demasiado fácil de confundir con el de al lado
+  // (navSubtitle → panel de layout, letra más pequeña, ambos muy juntos)
+  // — en la práctica el usuario acababa siempre en el panel equivocado.
+  // Ahora vive en el icono de la pestaña "Diario" del admin (tabAdJournal,
+  // icono ti-list — objetivo táctil mucho más grande que un texto
+  // pequeño) y SOLO se arma estando ya en esa pantalla: si el admin está
+  // en otra pestaña, tocar el icono navega a Diario con normalidad (como
+  // siempre) y NO cuenta para el gesto; si ya está en Diario, tocarlo no
+  // hace nada visible normalmente, así que 5 toques rápidos ahí son
+  // inequívocamente intencionales. Mismo patrón de conteo/touchend que
+  // ya usaban navTitle/navSubtitle (ver el bloque de más abajo, sin tocar).
   (function() {
-    var navTitleEl = document.getElementById('navTitle');
-    if (!navTitleEl) return;
-    navTitleEl.style.cursor = 'pointer';
+    var journalTabEl = document.getElementById('tabAdJournal');
+    if (!journalTabEl) return;
     var tapCount = 0, tapTimer = null, lastHandledAt = 0;
     function registerTap() {
+      var panel = document.getElementById('adPanelJournal');
+      if (!panel || panel.style.display === 'none') { tapCount = 0; return; } // solo cuenta si ya estamos EN Diario
       var now = Date.now();
-      if (now - lastHandledAt < 300) return; // evita doble conteo si click Y touchend disparan para el mismo toque
+      if (now - lastHandledAt < 300) return;
       lastHandledAt = now;
       tapCount++;
       if (tapTimer) clearTimeout(tapTimer);
@@ -12194,8 +12197,8 @@ if ('serviceWorker' in navigator) {
         diagnosePush();
       }
     }
-    navTitleEl.addEventListener('click', registerTap);
-    navTitleEl.addEventListener('touchend', function(e) { e.preventDefault(); registerTap(); }, { passive: false });
+    journalTabEl.addEventListener('click', registerTap);
+    journalTabEl.addEventListener('touchend', function() { registerTap(); }, { passive: true });
   })();
 
   // ═══ ACCESO AL PANEL DE DIAGNÓSTICO DE LAYOUT DESDE LA UI ═══
