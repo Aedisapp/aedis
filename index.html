@@ -809,15 +809,18 @@ body.pin-mode{overflow:hidden}
    usuario las quiere más grandes que eso, no solo igualadas — se sube
    el tamaño aquí mismo con selectores acotados a .adu-card (nunca
    tocando .rc-id/.rc-line "a pelo", que siguen siendo las de Diario). */
-.adu-card .rc-id{font-size:17px}
+/* Pedido 2026-07-30: seguían viéndose pequeñas tras el aumento del
+   2026-07-29 — un paso más grande todavía (avatar 46→54px, nombre
+   17→19px), mismo criterio de no tocar .rc-id/.rc-line a pelo. */
+.adu-card .rc-id{font-size:19px}
 .adu-card .rc-top{gap:12px}
-.u-avatar{width:46px;height:46px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;margin-top:1px}
+.u-avatar{width:54px;height:54px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;margin-top:1px}
 .u-avatar.admin{background:#e5f0ff;color:#0049c5}
 .u-avatar.manager{background:#f1eafd;color:#7c4fd6}
 .u-avatar.operario{background:#fbf1e1;color:#b9770e}
 /* Pedido 2026-07-29: el mismo color del avatar también en el texto del
    rol debajo del nombre (antes gris neutro como cualquier .rc-line). */
-.u-role-line{font-size:13.5px;font-weight:700;margin-top:7px}
+.u-role-line{font-size:14.5px;font-weight:700;margin-top:7px}
 .u-role-line.admin{color:#0049c5}
 .u-role-line.manager{color:#7c4fd6}
 .u-role-line.operario{color:#b9770e}
@@ -1070,15 +1073,21 @@ body.pin-mode{overflow:hidden}
 .ad-flt-btn.st-unverified.active{background:#8e8e93;color:#fff}
 .ad-flt-btn.st-suspended{background:#f2f2f7;color:#636366}
 .ad-flt-btn.st-suspended.active{background:#636366;color:#fff}
-#adUsStatusFilters{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-#adUsStatusFilters::-webkit-scrollbar{display:none}
+/* Pedido 2026-07-30: esta franja de chips (Todos/Pendientes/Activos/
+   Rechazados/Suspendidos) se salía del ancho de pantalla en un móvil
+   normal — con flex-wrap:nowrap + overflow-x:auto "funcionaba" pero solo
+   a base de scroll horizontal, y el último chip (Suspendidos) quedaba
+   cortado en el borde sin ninguna pista visual de que había más. Ahora
+   envuelve a una 2ª línea si no caben todos — nunca se sale de pantalla,
+   nunca hace falta deslizar para ver un filtro. */
+#adUsStatusFilters{flex-wrap:wrap;row-gap:6px}
 #adJournalStatusQuick::-webkit-scrollbar{display:none}
-#adUsStatusFilters .ad-flt-btn{padding:4px 10px;font-size:11px;flex-shrink:0;white-space:nowrap}
+#adUsStatusFilters .ad-flt-btn{padding:4px 10px;font-size:11px;white-space:nowrap}
 .ad-status-badge.st-unverified{background:#f2f2f7;color:#8e8e93}
 .ad-status-badge.st-suspended{background:#f2f2f7;color:#636366}
 
 /* ── Panel Usuarios (admin) ── */
-.adu-card{background:#fff;border:.5px solid #e5e5ea;border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.07);cursor:pointer;touch-action:manipulation}
+.adu-card{background:#fff;border:.5px solid #e5e5ea;border-radius:14px;padding:18px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.07);cursor:pointer;touch-action:manipulation}
 .adu-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px}
 .adu-name{font-size:20px;font-weight:700;color:#000;letter-spacing:-.3px;margin-bottom:5px}
 .adu-meta{font-size:12.5px;color:#8e8e93;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
