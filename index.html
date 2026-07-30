@@ -148,9 +148,6 @@ if ('serviceWorker' in navigator) {
       });
     } catch(err) {
       console.log('[OneSignal] init FAILED:', err && err.message);
-      // Temporal (2026-07-30) — ver el comentario junto a _debugNotifyState():
-      // sin esto, un fallo aquí es invisible en un iPhone real (no hay consola).
-      try { alert('[OneSignal] init FAILED: ' + (err && err.message)); } catch(e2) {}
     }
   });
 </script>
@@ -239,7 +236,16 @@ html,body{background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,"SF Pr
    recortado, nunca fuera de él. <html> pasa a usar la misma unidad
    dinámica que <body>, eliminando cualquier posible desajuste entre
    ambos por usar dos formas distintas de expresar "toda la pantalla". */
-html{height:100dvh;overflow:hidden;touch-action:manipulation}
+/* Pedido 2026-07-30: un admin tocó por error el control de zoom de
+   Safari ("aA" → A/A) para este sitio, y esa preferencia de zoom queda
+   guardada POR SITIO en el propio Safari — así que toda la app se veía
+   agrandada en ESE dispositivo hasta que él mismo la resetee ahí (Apple
+   no permite a una web bloquear del todo ese control, es a propósito,
+   por accesibilidad). Esto no evita ese gesto concreto, pero sí evita
+   que Safari/WebKit reajuste el tamaño de fuente automáticamente por su
+   cuenta en otras circunstancias (rotación, etc.) — mismo tamaño en
+   toda la app, siempre. */
+html{height:100dvh;overflow:hidden;touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{overflow:hidden;touch-action:manipulation}
 /* BUG RAÍZ ENCONTRADO Y CORREGIDO (2026-07-17, tras 12 intentos fallidos
    con otras teorías): esta regla decía "100svh", no "100dvh" — un error
@@ -10359,9 +10365,6 @@ function waitForOneSignal(callback, retriesLeft) {
   }
   if (retriesLeft <= 0) {
     console.log('[OneSignal] SDK no llegó a inicializar tras esperar');
-    // Temporal (2026-07-30) — ver _debugNotifyState(): sin esto, este
-    // timeout es invisible en un iPhone real (no hay consola a mano).
-    try { alert('[OneSignal] el SDK no llegó a inicializar tras ~10s de espera (window.__oneSignalReady sigue false).'); } catch(e) {}
     return;
   }
   setTimeout(function() { waitForOneSignal(callback, retriesLeft - 1); }, 500);
@@ -10425,30 +10428,7 @@ function isStandalonePWA() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 
-// Pedido 2026-07-30 (temporal, para depurar "el banner de notificaciones
-// nunca aparece" cuando el gesto de 5 toques tampoco es fiable en el
-// dispositivo real): muestra SIEMPRE, sin ningún gesto especial, el
-// estado exacto justo al entrar a ensureNotifyPermission() — de dónde
-// sale (o no) cada rama de la función. QUITAR este alert() en cuanto se
-// identifique la causa real; no es una función permanente de la app.
-function _debugNotifyState(label) {
-  try {
-    var lines = [
-      label,
-      'Notification in window: ' + ('Notification' in window),
-      'Notification.permission: ' + (('Notification' in window) ? Notification.permission : 'n/a'),
-      'notifyPermissionAsked: ' + notifyPermissionAsked,
-      'isIOSDevice(): ' + isIOSDevice(),
-      'isStandalonePWA(): ' + isStandalonePWA(),
-      'typeof OneSignal: ' + (typeof OneSignal),
-      'window.__oneSignalReady: ' + !!window.__oneSignalReady
-    ];
-    alert(lines.join('\n'));
-  } catch (e) { alert('_debugNotifyState error: ' + e.message); }
-}
-
 function ensureNotifyPermission() {
-  _debugNotifyState('ensureNotifyPermission() — estado al entrar');
   if (!('Notification' in window)) return; // navegador sin soporte — no insistimos
   if (notifyPermissionAsked) return;
   if (Notification.permission !== 'default') return; // ya concedido o denegado
