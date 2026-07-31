@@ -1497,7 +1497,7 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
 
 <nav class="nav" id="mainNav">
   <div class="nav-side" id="navExit" style="visibility:hidden;justify-content:flex-start">
-    <div class="globe-btn" onclick="changeUser()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
+    <div class="globe-btn" id="navExitBtn" onclick="changeUser()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
   </div>
   <div class="nav-center">
     <div class="nav-title" id="navTitle">AEDIS</div>
@@ -7947,6 +7947,32 @@ function openAdminInformeDetail(id) {
   document.getElementById('mgDetailModal').classList.add('show');
 }
 
+/* Pedido 2026-07-31: en el admin, el botón de arriba a la izquierda
+ * (navExit, compartido con operario/manager — ahí sigue igual que
+ * siempre, SOLO se cambia aquí) deja de ser "cerrar sesión" fijo:
+ * - Usuarios → cerrar sesión (icono/acción originales).
+ * - Diario/Análisis → oculto (ya está la barra inferior para navegar).
+ * - Crear → una "X" que vuelve a Diario en vez de cerrar sesión.
+ * Centralizado en una función porque switchAdTab() Y el arranque inicial
+ * (initAdminScreen, que no pasa por switchAdTab) necesitan aplicarlo. */
+var NAV_EXIT_LOGOUT_ICON = '<svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+var NAV_EXIT_CLOSE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+function updateAdminNavExit(tab) {
+  var wrap = document.getElementById('navExit');
+  var btn = document.getElementById('navExitBtn');
+  if (tab === 'usuarios') {
+    wrap.style.visibility = 'visible';
+    btn.innerHTML = NAV_EXIT_LOGOUT_ICON;
+    btn.onclick = function(){ changeUser(); };
+  } else if (tab === 'crear') {
+    wrap.style.visibility = 'visible';
+    btn.innerHTML = NAV_EXIT_CLOSE_ICON;
+    btn.onclick = function(){ switchAdTab('journal'); };
+  } else {
+    wrap.style.visibility = 'hidden';
+  }
+}
+
 function switchAdTab(tab) {
   if (tab !== 'journal') markVisibleQueueAsSeen();
   // Pedido 2026-07-31: "crear" ya no tiene su propio botón en la barra
@@ -7970,6 +7996,7 @@ function switchAdTab(tab) {
   if (tab === 'analisis') initAnalisis();
   if (tab === 'usuarios') loadAdminUsers();
   if (tab === 'crear') adcrInit();
+  updateAdminNavExit(tab);
 }
 
 /* ── Pull-to-refresh: qué recargar según la pestaña visible ──
@@ -9726,6 +9753,10 @@ function renderAnalisis() {
 }
 
 function initAdminScreen() {
+  // El admin arranca en Diario (así lo marca el HTML estático de
+  // tabbarAdmin/adPanelJournal) sin pasar por switchAdTab() — hay que
+  // aplicar el estado del navExit a mano para ese primer momento.
+  updateAdminNavExit('journal');
   return loadAdminData();
 }
 
