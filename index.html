@@ -143,6 +143,7 @@ if ('serviceWorker' in navigator) {
           var data = event && event.notification && event.notification.additionalData;
           var id = data && data.reportId;
           if (!id) return;
+          if (data.mode === 'deleted') { openDeletedReportsModal([id]); return; }
           openReportById(id, data.mode || 'view');
         } catch(e) { console.log('[OneSignal] click handler error:', e && e.message); }
       });
@@ -2774,6 +2775,29 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
     </div>
     <div class="mg-modal-title" id="editSavedTitle" style="margin-bottom:6px">Cambios guardados</div>
     <div class="mg-modal-sub" id="editSavedSub" style="margin-bottom:0">—</div>
+  </div>
+</div>
+
+<!-- MODAL: INFORME ELIMINADO — pedido 2026-07-31. Abre desde el deep-link
+     de la notificación de borrado (deleteRecord, mode "deleted"). Vista
+     de solo lectura independiente de reportDetailModal/mgDetailModal/
+     adAdminDetailModal a propósito: un registro STATUS=deleted no está
+     cacheado en ninguna de las listas normales por rol (todas lo
+     excluyen), así que reutilizar esas pantallas obligaría a enseñarles
+     a cargar también informes borrados — ver getReportsByIds en
+     Code_v5.gs para el porqué de un endpoint aparte. -->
+<div class="mg-modal-overlay fullbleed" id="delRepModal" onclick="if(event.target===this)closeDeletedReportsModal()">
+  <div class="mg-modal" style="height:100%;max-height:100%;border-radius:0;overflow:hidden;display:flex;flex-direction:column;padding:0">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 20px) 18px 12px;border-bottom:.5px solid #f0f0f0;flex-shrink:0">
+      <div style="min-width:0">
+        <div class="mg-modal-title" id="delRepTitle">Informe eliminado</div>
+        <div class="mg-modal-sub" id="delRepSub">—</div>
+      </div>
+      <button type="button" onclick="closeDeletedReportsModal()" aria-label="Cerrar" style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:#f2f2f7;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation">
+        <i class="ti ti-x" style="font-size:19px;color:#000"></i>
+      </button>
+    </div>
+    <div id="delRepBody" style="overflow-y:auto;overflow-x:hidden;touch-action:pan-y;flex:1;padding:14px 18px;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain"></div>
   </div>
 </div>
 
@@ -11085,7 +11109,67 @@ function tryOpenDeepLinkedReport() {
   var mode = params.get('mode') || 'view';
   deepLinkHandled = true;
   try { window.history.replaceState({}, '', window.location.pathname); } catch(e) {}
+  if (mode === 'deleted') { openDeletedReportsModal([id]); return; }
   openReportById(id, mode);
+}
+
+function closeDeletedReportsModal() {
+  var m = document.getElementById('delRepModal');
+  if (m) m.classList.remove('show');
+}
+
+// Vista de solo lectura para la notificación de borrado (deleteRecord,
+// mode "deleted" — ver getReportsByIds en Code_v5.gs). El registro sigue
+// existiendo (STATUS=deleted, no se borra la fila) pero las pantallas
+// normales de detalle por rol no lo tienen cacheado porque
+// getMyReports/getAdminStats/getHistorial lo excluyen a propósito.
+function openDeletedReportsModal(ids) {
+  ids = (ids || []).filter(function(x){ return x; });
+  if (!ids.length || !currentUser) return;
+  var modal = document.getElementById('delRepModal');
+  var titleEl = document.getElementById('delRepTitle');
+  var subEl = document.getElementById('delRepSub');
+  var body = document.getElementById('delRepBody');
+  if (!modal || !body) return;
+
+  titleEl.textContent = 'Informe eliminado';
+  subEl.textContent = ids[0];
+  body.innerHTML = '<div style="text-align:center;padding:30px 0;color:#8e8e93">Cargando…</div>';
+  modal.classList.add('show');
+
+  fetch(WEBAPP_URL + '?action=getReportsByIds&codigo=' + encodeURIComponent(currentPin) + '&ids=' + encodeURIComponent(ids.join(',')) + '&t=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(result){
+      if (!modal.classList.contains('show')) return; // se cerró mientras cargaba
+      var found = (result && result.status === 'ok') ? (result.data || []) : [];
+      var showTotal = currentUser.rol === 'admin';
+      var html = '';
+      found.forEach(function(r){
+        html += '<div style="border-bottom:.5px solid #f0f0f0;padding:14px 0">';
+        html += '<div style="font-weight:700;font-size:15px">' + escapeHtml(r.ID || '') + '</div>';
+        var line = [];
+        if (r.FECHA) line.push(fmtDate(r.FECHA));
+        if (r.CLIENTE) line.push(escapeHtml(r.CLIENTE));
+        if (r.OBRA) line.push(escapeHtml(r.OBRA));
+        if (line.length) html += '<div style="color:#666;font-size:13px;margin-top:2px">' + line.join(' · ') + '</div>';
+        var who = [];
+        if (r.OPERARIO) who.push(escapeHtml(r.OPERARIO));
+        if (r.TIPO) who.push(escapeHtml(r.TIPO));
+        if (who.length) html += '<div style="color:#666;font-size:13px;margin-top:2px">' + who.join(' · ') + '</div>';
+        if (showTotal && r.TOTAL && parseFloat(r.TOTAL) > 0) {
+          html += '<div style="font-weight:700;color:#22b862;margin-top:4px">' + parseFloat(r.TOTAL).toFixed(2) + ' €</div>';
+        }
+        if (r.MANAGER_NOMBRE) {
+          html += '<div style="font-size:12px;color:#8e8e93;margin-top:4px">Eliminado por ' + escapeHtml(r.MANAGER_NOMBRE) + '</div>';
+        }
+        html += '</div>';
+      });
+      if (!html) html = '<div style="text-align:center;padding:30px 0;color:#8e8e93">No hay datos disponibles.</div>';
+      body.innerHTML = html;
+    })
+    .catch(function(){
+      body.innerHTML = '<div style="text-align:center;padding:30px 0;color:#8e8e93">Error al cargar.</div>';
+    });
 }
 
 function openNotifModal() {
