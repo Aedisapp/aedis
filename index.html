@@ -1324,12 +1324,13 @@ body.pin-mode{overflow:hidden}
    patrón que arriba pero a 33.33% en vez de 50%, con su propia 3ª parada.
    Selector por id, más específico que .tab-indicator/.tab-1-active
    genéricos, así operario/manager (2 pestañas) no se ven afectados. */
-/* 4 pestañas desde que se añadió "Crear" (2026-07-28) — 25% en vez de
-   33.3333%, con una 4ª parada (tab-3-active). */
-#tabbarAdmin .tab-indicator{width:25%}
+/* 2026-07-31: "Crear" dejó de ser una pestaña propia (ahora es un botón
+   "+" dentro de Diario, ver adJournalSearchBar) — de vuelta a 3 pestañas
+   (Análisis/Diario/Usuarios), 33.3333% con su 2ª parada (tab-2-active
+   ahora es Usuarios, no Crear). */
+#tabbarAdmin .tab-indicator{width:33.3333%}
 #tabbarAdmin.tab-1-active .tab-indicator{transform:translateX(100%)}
 #tabbarAdmin.tab-2-active .tab-indicator{transform:translateX(200%)}
-#tabbarAdmin.tab-3-active .tab-indicator{transform:translateX(300%)}
 /* 2026-07-17: tamaño de toque revisado a petición explícita ("iconos de
    un tamaño que sean clicables y encajen visualmente") — .bottom-tab ya
    era el área de toque completa (flex:1, todo el ancho de su mitad de la
@@ -2856,6 +2857,14 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
         style="width:40px;height:40px;border-radius:12px;border:none;background:#f2f2f7;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;touch-action:manipulation">
         <svg id="adFilterIcon" style="width:18px;height:18px;stroke:#0049c5;fill:none;stroke-width:2;stroke-linecap:round" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
       </button>
+      <!-- Pedido 2026-07-31: el botón "Crear" ya no es su propia pestaña
+           en la barra inferior — se movió aquí, mismo "+" que ya usa
+           Usuarios (openAdCreateUserModal), pero este abre el panel
+           adPanelCrear (switchAdTab('crear'), ya existía, solo faltaba
+           un sitio desde donde llegar sin la pestaña dedicada). -->
+      <button type="button" onclick="switchAdTab('crear')" aria-label="Crear informe" style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:#0049c5;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation">
+        <i class="ti ti-plus" style="font-size:19px;color:#fff"></i>
+      </button>
     </div>
 
     <!-- Переключатель статуса под поиском (тот же паттерн, что и на
@@ -3173,13 +3182,21 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
 
     <div class="slabel"><span id="sl-adcr-personal">Personal</span></div>
     <div class="card">
-      <div class="row">
+      <div class="mode-header" id="radcrAyudante">
         <div class="rbadge b-green"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2M16 11h6m-3-3v6"/></svg></div>
         <span class="rlabel" id="lbl-adcr-ayudante">Ayudante</span>
-        <div class="sel-wrap">
-          <select class="rselect" id="adcrAyudante" onchange="this.classList.toggle('has-val',!!this.value)"></select>
-          <span class="rchev"><svg viewBox="0 0 14 8"><polyline points="1,1 7,7 13,1"/></svg></span>
+        <div class="mode-toggle">
+          <button class="ct on" id="adcrCtAyL" onclick="adcrSetAyudanteMode('list')"><span id="adcr-ct-ayl-lbl">Lista</span></button>
+          <button class="ct" id="adcrCtAyN" onclick="adcrSetAyudanteMode('new')"><span id="adcr-ct-ayn-lbl">Nuevo</span></button>
         </div>
+      </div>
+      <div class="mode-list-row" id="adcrAyudanteListRow">
+        <span style="flex:1"></span>
+        <select class="rselect" id="adcrAyudante" onchange="this.classList.toggle('has-val',!!this.value)"></select>
+        <span class="rchev"><svg viewBox="0 0 8 14"><polyline points="1,1 7,7 1,13"/></svg></span>
+      </div>
+      <div class="mode-text-row" id="adcrAyudanteTextRow">
+        <input class="mode-text-input" id="adcrAyudanteNew" placeholder="Nombre del ayudante...">
       </div>
       <div class="row">
         <div class="rbadge b-green"><svg viewBox="0 0 24 24"><path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0"/><path d="M5 17H3v-6l2-5h12l2 5v6h-2M5 17h10M3 11h18"/></svg></div>
@@ -3317,10 +3334,17 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
 </div>
 
 <!-- BOTTOM TAB BAR: ADMIN — pedido 2026-07-28: orden Análisis/Diario(Отчеты)/
-     Crear/Usuarios(Управление персоналом). El indicador deslizante depende
-     de ESTE orden posicional (tab-1/2/3-active = 2ª/3ª/4ª posición, ver
+     Usuarios(Управление персоналом). El indicador deslizante depende de
+     ESTE orden posicional (tab-1/2-active = 2ª/3ª posición, ver
      switchAdTab) — si se vuelve a reordenar, hay que actualizar ambos a
-     la vez. -->
+     la vez.
+     Pedido 2026-07-31: "Crear" ya NO es su propia pestaña aquí — se
+     movió a un botón "+" dentro de Diario (ver adJournalSearchBar), mismo
+     "+" que ya usa Usuarios. adPanelCrear sigue existiendo tal cual
+     (switchAdTab('crear') sigue funcionando), solo cambió desde dónde se
+     llega — con la barra inferior siempre visible, tocar "Diario" sigue
+     siendo la forma de salir de Crear, igual que antes con cualquier otra
+     pestaña. -->
 <div class="bottom-tabbar tab-1-active" id="tabbarAdmin" style="display:none">
   <div class="tab-indicator"></div>
   <div class="bottom-tab" id="tabAdAnalisis" onclick="switchAdTab('analisis')">
@@ -3330,10 +3354,6 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
   <div class="bottom-tab active" id="tabAdJournal" onclick="switchAdTab('journal')">
     <div class="tab-icon"><i class="ti ti-list"></i></div>
     <span>Diario</span>
-  </div>
-  <div class="bottom-tab" id="tabAdCrear" onclick="switchAdTab('crear')">
-    <div class="tab-icon"><i class="ti ti-file-plus"></i></div>
-    <span id="adCrearTabLbl">Crear</span>
   </div>
   <div class="bottom-tab" id="tabAdUsuarios" onclick="switchAdTab('usuarios')">
     <div class="tab-icon"><i class="ti ti-users"></i></div>
@@ -3878,7 +3898,6 @@ function applyLang() {
   // operario, mismas claves de traducción reutilizadas donde el texto es
   // idéntico ("Cliente", "Fecha", etc.), más las nuevas propias del
   // selector "¿Quién hizo el trabajo?" y los botones.
-  setEl('adCrearTabLbl', t('adcr_tab'));
   setEl('sl-adcr-quien',      t('adcr_sl_quien'));
   setEl('lbl-adcr-quien',     t('adcr_trabajador'));
   setEl('adcr-quien-self-lbl', t('adcr_yo_mismo'));
@@ -3906,6 +3925,8 @@ function applyLang() {
   setEl('adcr-ct-cln-lbl', t('ct_nuevo'));
   setEl('adcr-ct-obl-lbl', t('ct_lista'));
   setEl('adcr-ct-obn-lbl', t('ct_nueva_obra'));
+  setEl('adcr-ct-ayl-lbl', t('ct_lista'));
+  setEl('adcr-ct-ayn-lbl', t('ct_nuevo'));
   setEl('adcr-ct-tl-lbl',  t('ct_lista'));
   setEl('adcr-ct-tn-lbl',  t('ct_otro'));
   setEl('adcr-ct-cl-lbl',  t('ct_lista'));
@@ -7928,13 +7949,19 @@ function openAdminInformeDetail(id) {
 
 function switchAdTab(tab) {
   if (tab !== 'journal') markVisibleQueueAsSeen();
-  document.getElementById('tabAdJournal').classList.toggle('active', tab === 'journal');
-  document.getElementById('tabAdAnalisis').classList.toggle('active', tab === 'analisis');
-  document.getElementById('tabAdUsuarios').classList.toggle('active', tab === 'usuarios');
-  document.getElementById('tabAdCrear').classList.toggle('active', tab === 'crear');
-  document.getElementById('tabbarAdmin').classList.toggle('tab-1-active', tab === 'journal');
-  document.getElementById('tabbarAdmin').classList.toggle('tab-2-active', tab === 'crear');
-  document.getElementById('tabbarAdmin').classList.toggle('tab-3-active', tab === 'usuarios');
+  // Pedido 2026-07-31: "crear" ya no tiene su propio botón en la barra
+  // (se entra desde el "+" de Diario, ver adJournalSearchBar) — al no
+  // tocar aquí ni el estado .active de los botones ni el indicador
+  // deslizante cuando tab==='crear', ambos se quedan tal cual estaban
+  // (siempre "Diario", que es el único sitio desde el que se llega),
+  // en vez de saltar a la posición por defecto (Análisis) sin motivo.
+  if (tab !== 'crear') {
+    document.getElementById('tabAdJournal').classList.toggle('active', tab === 'journal');
+    document.getElementById('tabAdAnalisis').classList.toggle('active', tab === 'analisis');
+    document.getElementById('tabAdUsuarios').classList.toggle('active', tab === 'usuarios');
+    document.getElementById('tabbarAdmin').classList.toggle('tab-1-active', tab === 'journal');
+    document.getElementById('tabbarAdmin').classList.toggle('tab-2-active', tab === 'usuarios');
+  }
   document.getElementById('adPanelJournal').style.display = tab === 'journal' ? 'block' : 'none';
   document.getElementById('adPanelAnalisis').style.display = tab === 'analisis' ? 'block' : 'none';
   document.getElementById('adPanelUsuarios').style.display = tab === 'usuarios' ? 'block' : 'none';
@@ -8059,7 +8086,7 @@ function refreshCurrentView() {
  * la acción 'approve' ya existente justo después de crear/subir fotos,
  * reutilizando approveRecord() tal cual en vez de duplicar su lógica de
  * copiar a INFORME). */
-var adcrClienteMode = 'list', adcrObraMode = 'list', adcrTipoMode = 'list', adcrCompMode = 'list';
+var adcrClienteMode = 'list', adcrObraMode = 'list', adcrTipoMode = 'list', adcrCompMode = 'list', adcrAyudanteMode = 'list';
 var adcrQuienMode = 'self';
 var adcrPhotosObraSelected = [];
 var adcrPhotosMatSelected = [];
@@ -8111,6 +8138,21 @@ function adcrSetObraMode(m) {
 }
 function adcrGetCliente() { return adcrClienteMode==='list' ? document.getElementById('adcrCliente').value : document.getElementById('adcrClienteNew').value.trim(); }
 function adcrGetObra()    { return adcrObraMode==='list'    ? document.getElementById('adcrObra').value    : document.getElementById('adcrObraNew').value.trim(); }
+
+// Pedido 2026-07-31: mismo "Añadir" para Ayudante que ya tiene el
+// formulario del operario (ver setAyudanteMode) — aquí en el panel de
+// creación del admin (adcr*). No es obligatorio, no entra en
+// adcrUpdateBtn().
+function adcrSetAyudanteMode(m) {
+  adcrAyudanteMode = m;
+  document.getElementById('adcrCtAyL').classList.toggle('on', m==='list');
+  document.getElementById('adcrCtAyN').classList.toggle('on', m!=='list');
+  document.getElementById('adcrAyudanteListRow').style.display = m==='list' ? 'flex' : 'none';
+  document.getElementById('adcrAyudanteTextRow').style.display = m==='new' ? 'block' : 'none';
+  if (m==='list') document.getElementById('adcrAyudanteNew').value='';
+  else { document.getElementById('adcrAyudante').selectedIndex=0; document.getElementById('adcrAyudante').classList.remove('has-val'); }
+}
+function adcrGetAyudante() { return adcrAyudanteMode==='list' ? document.getElementById('adcrAyudante').value : document.getElementById('adcrAyudanteNew').value.trim(); }
 
 function adcrSetTipoMode(m) {
   adcrTipoMode = m;
@@ -8247,7 +8289,7 @@ function adcrLoadTrabajadores() {
 
 function adcrClearForm(skip) {
   if (!skip && !confirm('¿Borrar todo?')) return;
-  ['adcrVehiculo','adcrTrabajos','adcrMateriales','adcrTipoNew','adcrCompaniaNew','adcrClienteNew','adcrObraNew','adcrPrecio'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['adcrVehiculo','adcrTrabajos','adcrMateriales','adcrTipoNew','adcrCompaniaNew','adcrClienteNew','adcrObraNew','adcrAyudanteNew','adcrPrecio'].forEach(function(id){ document.getElementById(id).value=''; });
   ['adcrCliente','adcrObra','adcrAyudante','adcrTipo','adcrCompania'].forEach(function(id){
     var el = document.getElementById(id); el.selectedIndex=0; el.classList.remove('has-val');
   });
@@ -8256,7 +8298,7 @@ function adcrClearForm(skip) {
   var d = new Date();
   document.getElementById('adcrFecha').value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   ['radcrCliente','radcrObra','radcrFecha','radcrTipo','radcrHoras'].forEach(clearErr);
-  adcrSetTipoMode('list'); adcrSetCompMode('list'); adcrSetClienteMode('list'); adcrSetObraMode('list');
+  adcrSetTipoMode('list'); adcrSetCompMode('list'); adcrSetClienteMode('list'); adcrSetObraMode('list'); adcrSetAyudanteMode('list');
   adcrSetQuienMode('self');
   if (document.getElementById('adcrTrabajador')) document.getElementById('adcrTrabajador').selectedIndex = 0;
   adcrPhotosObraSelected = []; adcrPhotosMatSelected = [];
@@ -8308,7 +8350,7 @@ function adcrSaveRecord() {
     cliente:    adcrGetCliente(),
     obra:       adcrGetObra(),
     operario:   operarioNombre,
-    ayudante:   document.getElementById('adcrAyudante').value,
+    ayudante:   adcrGetAyudante(),
     vehiculo:   document.getElementById('adcrVehiculo').value,
     trabajos:   document.getElementById('adcrTrabajos').value,
     tipo:       adcrGetTipo(),
