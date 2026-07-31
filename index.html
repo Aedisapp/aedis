@@ -9342,7 +9342,18 @@ function rbRecalc() {
 
 function rbBuildPreviewTableHtml(filas, totales) {
   if (!filas.length) return '<div class="mi-empty">' + t('rb_objetos_empty') + '</div>';
-  var html = '<div style="overflow-x:auto;border-radius:14px;overflow:hidden;border:.5px solid #e5e5ea;box-shadow:0 2px 10px rgba(0,0,0,.07)">';
+  // BUG CORREGIDO 2026-07-31 ("no se ve el final de la tabla ni se puede
+  // deslizar"): el div ya tenía overflow-x:auto, pero el "overflow:hidden"
+  // que venía justo DESPUÉS en el mismo style (puesto solo para recortar
+  // las esquinas redondeadas contra la tabla) es taquigrafía de
+  // overflow-x+overflow-y — al ir después, pisaba el overflow-x:auto
+  // anterior y lo dejaba en "hidden" de verdad. La tabla nunca pudo
+  // desplazarse. Ahora overflow-y:hidden (forma larga, solo el eje
+  // vertical) sigue recortando las esquinas sin tocar el eje horizontal;
+  // + touch-action:pan-x para que iOS entregue el gesto horizontal como
+  // scroll de esta caja en vez de dejarlo ambiguo frente al scroll
+  // vertical del modal que la contiene.
+  var html = '<div style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-x;border-radius:14px;border:.5px solid #e5e5ea;box-shadow:0 2px 10px rgba(0,0,0,.07)">';
   html += '<table style="width:100%;border-collapse:collapse;background:#fff;font-family:inherit">';
   html += '<thead><tr style="background:#f2f2f7">';
   [t('rb_col_obra'), t('rb_col_dias'), t('rb_col_horas'), t('rb_col_materiales'), t('rb_col_trabajo'), t('rb_col_total')].forEach(function(h, i) {
