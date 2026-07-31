@@ -141,13 +141,8 @@ if ('serviceWorker' in navigator) {
       OneSignal.Notifications.addEventListener('click', function(event) {
         try {
           var data = event && event.notification && event.notification.additionalData;
-          if (data && data.reportIds) {
-            openDeletedReportsModal(data.reportIds.split(',').filter(function(x){ return x; }));
-            return;
-          }
           var id = data && data.reportId;
           if (!id) return;
-          if (data.mode === 'deleted') { openDeletedReportsModal([id]); return; }
           openReportById(id, data.mode || 'view');
         } catch(e) { console.log('[OneSignal] click handler error:', e && e.message); }
       });
@@ -161,7 +156,6 @@ if ('serviceWorker' in navigator) {
 <script>
 // ЗАМЕНИТЕ на актуальный URL вашего развёрнутого Apps Script веб-приложения
 const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwMgBbOFsvGjTnds9cooDGp0t56wYR5Jj2hv2mk_m-k0hANZPY5pvLlatvYrNNeUQzSzw/exec";
-
 // Client ID de Google Sign-In — público (va también en el backend, ver
 // GOOGLE_CLIENT_ID en Code_v5.gs; el frontend solo lo usa para inicializar
 // el botón, la verificación real del token ocurre en el backend contra el
@@ -1859,6 +1853,40 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
   </div>
 </div>
 
+<!-- MODAL: CREAR USUARIO TEMPORAL (pedido 2026-07-31) — solo PIN, sin
+     pasar por el registro AUTH v2 (email+OTP+contraseña). El backend
+     (adminCreateUser en Code_v5.gs) exige rol admin, así que este botón
+     no es más que un atajo de UI. -->
+<div class="mg-modal-overlay" id="adCreateUserModal" onclick="if(event.target===this)closeAdCreateUserModal()">
+  <div class="mg-modal">
+    <div class="mg-modal-title" style="margin-bottom:14px">Nuevo usuario temporal</div>
+    <div id="acuFormWrap" style="display:flex;flex-direction:column;gap:10px">
+      <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Nombre</label>
+        <input type="text" id="acuNombre" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
+      </div>
+      <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Rol</label>
+        <select id="acuRol" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
+          <option value="operario">Operario</option>
+          <option value="manager">Manager</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div style="font-size:12px;color:#8e8e93;line-height:1.4">Este usuario entra solo con un código de 4 dígitos — sin email ni contraseña. Ideal para trabajadores puntuales.</div>
+    </div>
+    <div id="acuResultWrap" style="display:none;text-align:center;padding:6px 0">
+      <div style="font-size:13px;color:#8e8e93;margin-bottom:6px">Código de acceso para <b id="acuResultNombre">—</b></div>
+      <div style="font-size:34px;font-weight:800;letter-spacing:5px;color:#0049c5" id="acuResultCodigo">····</div>
+      <div style="font-size:12px;color:#8e8e93;margin-top:10px">Apúntalo — es lo único que necesita para entrar.</div>
+    </div>
+    <div class="mg-modal-actions" style="margin-top:16px" id="acuActions">
+      <button class="mg-modal-cancel" onclick="closeAdCreateUserModal()">Cancelar</button>
+      <button class="mg-modal-confirm positive" id="acuSaveBtn" onclick="submitAdCreateUser()">Crear</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MODAL: ADMIN — ASISTENTE "CREAR INFORME" (Parte 5 del plan) ═══
      Mismo chrome que adUserModal/reportDetailModal (.mg-modal-overlay
      fullbleed) — pero por dentro son varios "pasos" con display toggled
@@ -2365,13 +2393,21 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
            informe sigue siendo currentUser.nombre directamente en el
            payload (ver saveReport), así que quitar esta fila puramente
            visual no afecta el envío. -->
-      <div class="row">
+      <div class="mode-header" id="rAyudante">
         <div class="rbadge b-green"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2M16 11h6m-3-3v6"/></svg></div>
         <span class="rlabel" id="lbl-ayudante">Ayudante</span>
-        <div class="sel-wrap">
-          <select class="rselect" id="ayudante" onchange="this.classList.toggle('has-val',!!this.value)"></select>
-          <span class="rchev"><svg viewBox="0 0 14 8"><polyline points="1,1 7,7 13,1"/></svg></span>
+        <div class="mode-toggle">
+          <button class="ct on" id="ctAyL" onclick="setAyudanteMode('list')"><span id="ct-ayl-lbl">Lista</span></button>
+          <button class="ct" id="ctAyN" onclick="setAyudanteMode('new')"><span id="ct-ayn-lbl">Nuevo</span></button>
         </div>
+      </div>
+      <div class="mode-list-row" id="ayudanteListRow">
+        <span style="flex:1"></span>
+        <select class="rselect" id="ayudante" onchange="this.classList.toggle('has-val',!!this.value)"></select>
+        <span class="rchev"><svg viewBox="0 0 8 14"><polyline points="1,1 7,7 1,13"/></svg></span>
+      </div>
+      <div class="mode-text-row" id="ayudanteTextRow">
+        <input class="mode-text-input" id="ayudanteNew" placeholder="Nombre del ayudante...">
       </div>
       <div class="row">
         <div class="rbadge b-green"><svg viewBox="0 0 24 24"><path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0"/><path d="M5 17H3v-6l2-5h12l2 5v6h-2M5 17h10M3 11h18"/></svg></div>
@@ -2771,31 +2807,6 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
 </div>
 
 
-<!-- MODAL: INFORME(S) ELIMINADO(S) — pedido 2026-07-30. Abre desde el
-     deep-link de las notificaciones de borrado (deleteRecord, mode
-     "deleted"; y onSheetChangeAedis, borrado manual en la hoja). Vista
-     de solo lectura independiente de reportDetailModal/mgDetailModal/
-     adAdminDetailModal a propósito: un registro STATUS=deleted (o ya
-     desaparecido de la hoja del todo) no está cacheado en ninguna de las
-     listas normales por rol (myReportsCache/mgHistorialCache/adAllRecords
-     lo excluyen todas), así que reutilizar esas pantallas obligaría a
-     enseñarles a cargar también informes borrados — ver getReportsByIds
-     en Code_v5.gs para el porqué de un endpoint aparte. -->
-<div class="mg-modal-overlay fullbleed" id="delRepModal" onclick="if(event.target===this)closeDeletedReportsModal()">
-  <div class="mg-modal" style="height:100%;max-height:100%;border-radius:0;overflow:hidden;display:flex;flex-direction:column;padding:0">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 20px) 18px 12px;border-bottom:.5px solid #f0f0f0;flex-shrink:0">
-      <div style="min-width:0">
-        <div class="mg-modal-title" id="delRepTitle">Informe eliminado</div>
-        <div class="mg-modal-sub" id="delRepSub">—</div>
-      </div>
-      <button type="button" onclick="closeDeletedReportsModal()" aria-label="Cerrar" style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:#f2f2f7;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation">
-        <i class="ti ti-x" style="font-size:19px;color:#000"></i>
-      </button>
-    </div>
-    <div id="delRepBody" style="overflow-y:auto;overflow-x:hidden;touch-action:pan-y;flex:1;padding:14px 18px;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain"></div>
-  </div>
-</div>
-
 <!-- MODAL: DETALLE Y DECISIÓN (Manager) -->
 <div class="mg-modal-overlay fullbleed" id="mgDetailModal" onclick="if(event.target===this)closeManagerDetail()">
   <div class="mg-modal" style="height:100%;max-height:100%;border-radius:0;overflow:hidden;display:flex;flex-direction:column;padding:0">
@@ -3069,10 +3080,18 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
   <!-- ── PANEL: USUARIOS (AUTH v2) ── -->
   <div id="adPanelUsuarios" style="display:none">
     <div style="padding:10px 14px 6px">
-      <div style="flex:1;position:relative">
-        <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:#8e8e93;fill:none;stroke-width:2;stroke-linecap:round;pointer-events:none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="adUsSearch" oninput="renderAdminUsersDebounced()"
-          style="width:100%;padding:9px 12px 9px 33px;border-radius:12px;border:none;background:#f2f2f7;font-family:inherit;font-size:14px;color:#000;outline:none">
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="flex:1;position:relative">
+          <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:#8e8e93;fill:none;stroke-width:2;stroke-linecap:round;pointer-events:none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="adUsSearch" oninput="renderAdminUsersDebounced()"
+            style="width:100%;padding:9px 12px 9px 33px;border-radius:12px;border:none;background:#f2f2f7;font-family:inherit;font-size:14px;color:#000;outline:none">
+        </div>
+        <!-- Pedido 2026-07-31: crear un usuario temporal (solo PIN, sin
+             pasar por el registro AUTH v2) directamente desde aquí — ver
+             openAdCreateUserModal()/adminCreateUser en Code_v5.gs. -->
+        <button type="button" onclick="openAdCreateUserModal()" aria-label="Añadir usuario" style="flex-shrink:0;width:38px;height:38px;border-radius:50%;background:#0049c5;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation">
+          <i class="ti ti-plus" style="font-size:19px;color:#fff"></i>
+        </button>
       </div>
       <div style="display:flex;gap:6px;margin-top:10px" id="adUsStatusFilters">
         <button class="ad-flt-btn active" data-status="" onclick="setAdUsStatusFilter(this,'')" id="adUsF-all"><span id="adUsF-all-lbl">Todos</span> <span class="adu-flt-count" id="adUsF-all-n"></span></button>
@@ -4026,6 +4045,8 @@ function applyLang() {
   setEl('ct-cln-lbl', t('ct_nuevo'));
   setEl('ct-obl-lbl', t('ct_lista'));
   setEl('ct-obn-lbl', t('ct_nueva_obra'));
+  setEl('ct-ayl-lbl', t('ct_lista'));
+  setEl('ct-ayn-lbl', t('ct_nuevo'));
 
   // Лейблы фильтров (раскрывающаяся панель)
   setEl('flt-estado-lbl',   t('flt_label_estado'));
@@ -5058,7 +5079,7 @@ function refreshMyReportsBackground() {
 }
 
 /* ════════ OPERARIO: MODES (tipo / compania) ════════ */
-var tipoMode = 'list', compMode = 'list', clienteMode = 'list', obraMode = 'list';
+var tipoMode = 'list', compMode = 'list', clienteMode = 'list', obraMode = 'list', ayudanteMode = 'list';
 
 function setClienteMode(m) {
   clienteMode = m;
@@ -5084,6 +5105,21 @@ function setObraMode(m) {
 }
 function getCliente() { return clienteMode==='list' ? document.getElementById('cliente').value : document.getElementById('clienteNew').value.trim(); }
 function getObra()    { return obraMode==='list'    ? document.getElementById('obra').value    : document.getElementById('obraNew').value.trim(); }
+
+// Pedido 2026-07-31: el ayudante no siempre está en la lista de operarios
+// habituales — mismo patrón Lista/Nuevo que Cliente/Obra (ver arriba). No
+// es obligatorio (sin req-dot, no entra en updateBtn()), así que no hace
+// falta clearErr aquí.
+function setAyudanteMode(m) {
+  ayudanteMode = m;
+  document.getElementById('ctAyL').classList.toggle('on', m==='list');
+  document.getElementById('ctAyN').classList.toggle('on', m!=='list');
+  document.getElementById('ayudanteListRow').style.display = m==='list' ? 'flex' : 'none';
+  document.getElementById('ayudanteTextRow').style.display = m==='new' ? 'block' : 'none';
+  if (m==='list') document.getElementById('ayudanteNew').value='';
+  else { document.getElementById('ayudante').selectedIndex=0; document.getElementById('ayudante').classList.remove('has-val'); }
+}
+function getAyudante() { return ayudanteMode==='list' ? document.getElementById('ayudante').value : document.getElementById('ayudanteNew').value.trim(); }
 
 function setTipoMode(m) {
   tipoMode = m;
@@ -5409,7 +5445,7 @@ function saveRecord() {
     cliente:    getCliente(),
     obra:       getObra(),
     operario:   currentUser.nombre,
-    ayudante:   document.getElementById('ayudante').value,
+    ayudante:   getAyudante(),
     vehiculo:   document.getElementById('vehiculo').value,
     trabajos:   document.getElementById('trabajos').value,
     tipo:       getTipo(),
@@ -5644,7 +5680,7 @@ function startNew() {
 
 function clearForm(skip) {
   if (!skip && !confirm('¿Borrar todo?')) return;
-  ['vehiculo','trabajos','materiales','tipoNew','companiaNew','clienteNew','obraNew','precio'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['vehiculo','trabajos','materiales','tipoNew','companiaNew','clienteNew','obraNew','ayudanteNew','precio'].forEach(function(id){ document.getElementById(id).value=''; });
   ['cliente','obra','ayudante','tipo','compania'].forEach(function(id){
     var el = document.getElementById(id); el.selectedIndex=0; el.classList.remove('has-val');
   });
@@ -5653,7 +5689,7 @@ function clearForm(skip) {
   var d = new Date();
   document.getElementById('fecha').value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   ['rCliente','rObra','rFecha','rTipo','rHoras'].forEach(clearErr);
-  setTipoMode('list'); setCompMode('list'); setClienteMode('list'); setObraMode('list');
+  setTipoMode('list'); setCompMode('list'); setClienteMode('list'); setObraMode('list'); setAyudanteMode('list');
   photosObraSelected = []; photosMatSelected = [];
   renderThumbs('obra'); renderThumbs('materiales');
   updateBtn();
@@ -9973,6 +10009,56 @@ function closeAdUserModal() {
   adUmOriginalSnapshot = null;
 }
 
+/* Pedido 2026-07-31: botón "+" en Usuarios — crea un usuario temporal
+ * (solo PIN de 4 dígitos, sin email/contraseña) sin pasar por el
+ * registro AUTH v2. Ver adminCreateUser en Code_v5.gs. */
+function openAdCreateUserModal() {
+  document.getElementById('acuNombre').value = '';
+  document.getElementById('acuRol').value = 'operario';
+  document.getElementById('acuFormWrap').style.display = 'flex';
+  document.getElementById('acuResultWrap').style.display = 'none';
+  document.getElementById('acuActions').innerHTML =
+    '<button class="mg-modal-cancel" onclick="closeAdCreateUserModal()">Cancelar</button>' +
+    '<button class="mg-modal-confirm positive" id="acuSaveBtn" onclick="submitAdCreateUser()">Crear</button>';
+  document.getElementById('adCreateUserModal').classList.add('show');
+}
+
+function closeAdCreateUserModal() {
+  document.getElementById('adCreateUserModal').classList.remove('show');
+}
+
+function submitAdCreateUser() {
+  var nombre = document.getElementById('acuNombre').value.trim();
+  var rol = document.getElementById('acuRol').value;
+  if (!nombre) { alert('Falta el nombre'); return; }
+
+  var btn = document.getElementById('acuSaveBtn');
+  if (btn) btn.disabled = true;
+  fetch(WEBAPP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'adminCreateUser', codigo: currentPin, nombre: nombre, rol: rol })
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(result){
+      if (result && result.status === 'ok') {
+        document.getElementById('acuFormWrap').style.display = 'none';
+        document.getElementById('acuResultWrap').style.display = 'block';
+        document.getElementById('acuResultNombre').textContent = nombre;
+        document.getElementById('acuResultCodigo').textContent = result.codigo;
+        document.getElementById('acuActions').innerHTML =
+          '<button class="mg-modal-confirm positive" style="width:100%" onclick="closeAdCreateUserModal();loadAdminUsers();">Listo</button>';
+      } else {
+        if (btn) btn.disabled = false;
+        alert((result && result.message) || 'No se pudo crear el usuario.');
+      }
+    })
+    .catch(function(){
+      if (btn) btn.disabled = false;
+      alert('Error de red.');
+    });
+}
+
 /* Solo aplica a active/rejected/suspended (ver openAdUserModal) — cambia
  * entre la ficha de solo lectura y el formulario editable, sin volver a
  * pedir datos al servidor (ya están todos en memoria). */
@@ -10921,79 +11007,12 @@ function openReportById(id, mode) {
 function tryOpenDeepLinkedReport() {
   if (deepLinkHandled || !currentUser) return;
   var params = new URLSearchParams(window.location.search);
-  var listParam = params.get('openReportList');
   var id = params.get('openReport');
-  if (!listParam && !id) return;
+  if (!id) return;
   var mode = params.get('mode') || 'view';
   deepLinkHandled = true;
   try { window.history.replaceState({}, '', window.location.pathname); } catch(e) {}
-  if (listParam) { openDeletedReportsModal(listParam.split(',').filter(function(x){ return x; })); return; }
-  if (mode === 'deleted') { openDeletedReportsModal([id]); return; }
   openReportById(id, mode);
-}
-
-function closeDeletedReportsModal() {
-  var m = document.getElementById('delRepModal');
-  if (m) m.classList.remove('show');
-}
-
-// Vista de solo lectura para las notificaciones de borrado (ver
-// getReportsByIds en Code_v5.gs). ids: array de 1 o más IDs — un solo id
-// puede venir de deleteRecord (STATUS=deleted, la fila sigue existiendo)
-// o de un borrado manual en la hoja (la fila ya no existe: el backend
-// simplemente no la encuentra y aparece en "missing" más abajo).
-function openDeletedReportsModal(ids) {
-  ids = (ids || []).filter(function(x){ return x; });
-  if (!ids.length || !currentUser) return;
-  var modal = document.getElementById('delRepModal');
-  var titleEl = document.getElementById('delRepTitle');
-  var subEl = document.getElementById('delRepSub');
-  var body = document.getElementById('delRepBody');
-  if (!modal || !body) return;
-
-  titleEl.textContent = ids.length === 1 ? 'Informe eliminado' : 'Informes eliminados';
-  subEl.textContent = ids.length === 1 ? ids[0] : (ids.length + ' informes');
-  body.innerHTML = '<div style="text-align:center;padding:30px 0;color:#8e8e93">Cargando…</div>';
-  modal.classList.add('show');
-
-  fetch(WEBAPP_URL + '?action=getReportsByIds&codigo=' + encodeURIComponent(currentPin) + '&ids=' + encodeURIComponent(ids.join(',')) + '&t=' + Date.now())
-    .then(function(resp){ return resp.json(); })
-    .then(function(result){
-      if (!modal.classList.contains('show')) return; // se cerró mientras cargaba
-      var found = (result && result.status === 'ok') ? (result.data || []) : [];
-      var foundIds = found.map(function(r){ return r.ID; });
-      var showTotal = currentUser.rol === 'admin';
-      var html = '';
-      found.forEach(function(r){
-        html += '<div style="border-bottom:.5px solid #f0f0f0;padding:14px 0">';
-        html += '<div style="font-weight:700;font-size:15px">' + escapeHtml(r.ID || '') + '</div>';
-        var line = [];
-        if (r.FECHA) line.push(fmtDate(r.FECHA));
-        if (r.CLIENTE) line.push(escapeHtml(r.CLIENTE));
-        if (r.OBRA) line.push(escapeHtml(r.OBRA));
-        if (line.length) html += '<div style="color:#666;font-size:13px;margin-top:2px">' + line.join(' · ') + '</div>';
-        var who = [];
-        if (r.OPERARIO) who.push(escapeHtml(r.OPERARIO));
-        if (r.TIPO) who.push(escapeHtml(r.TIPO));
-        if (who.length) html += '<div style="color:#666;font-size:13px;margin-top:2px">' + who.join(' · ') + '</div>';
-        if (showTotal && r.TOTAL && parseFloat(r.TOTAL) > 0) {
-          html += '<div style="font-weight:700;color:#22b862;margin-top:4px">' + parseFloat(r.TOTAL).toFixed(2) + ' €</div>';
-        }
-        if (r.MANAGER_NOMBRE) {
-          html += '<div style="font-size:12px;color:#8e8e93;margin-top:4px">Eliminado por ' + escapeHtml(r.MANAGER_NOMBRE) + '</div>';
-        }
-        html += '</div>';
-      });
-      var missing = ids.filter(function(id){ return foundIds.indexOf(id) === -1; });
-      if (missing.length) {
-        html += '<div style="padding:14px 0;color:#8e8e93;font-size:13px">Ya no disponible(s) — borrado(s) por completo de la hoja: ' + missing.map(function(id){ return escapeHtml(id); }).join(', ') + '</div>';
-      }
-      if (!html) html = '<div style="text-align:center;padding:30px 0;color:#8e8e93">No hay datos disponibles.</div>';
-      body.innerHTML = html;
-    })
-    .catch(function(){
-      body.innerHTML = '<div style="text-align:center;padding:30px 0;color:#8e8e93">Error al cargar.</div>';
-    });
 }
 
 function openNotifModal() {
