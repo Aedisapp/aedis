@@ -1442,7 +1442,23 @@ body.pin-mode{overflow:hidden}
   // del tabbar en las 4 pestañas. Se usa el mayor de los dos valores:
   // cubre tanto "innerHeight se queda corto" (caso original) como
   // "screen.height se queda corto" (este caso nuevo).
+  //
+  // BUG CORREGIDO (2026-08-03, dato real de un Android vía ?debug=layout):
+  // este mecanismo entero nació para un bug concreto de WebKit/iOS (ver el
+  // comentario de arriba, 2026-07-17) — Android nunca lo tuvo. En un
+  // Android real, window.innerHeight (753) YA excluye correctamente la
+  // franja de los botones de navegación del sistema, pero
+  // window.screen.height incluye la pantalla física completa sin
+  // descontarla — el Math.max(...) de arriba elegía screen.height y
+  // estiraba el body 72px de más, empujando el .bottom-tabbar justo
+  // encima/detrás de esos botones (tabbar.bottom quedaba 72px por debajo
+  // del borde real de la ventana). Ahora todo el forzado de altura por JS
+  // se salta por completo fuera de iOS — Android no lo necesita, así que
+  // no debe tocarlo.
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS moderno se reporta como Mac
   function applyRealHeight() {
+    if (!isIOS) return;
     var h = window.screen && window.screen.height;
     var vh = window.innerHeight;
     if (vh && (!h || vh > h)) h = vh;
