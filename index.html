@@ -1336,6 +1336,15 @@ body.pin-mode{overflow:hidden}
 #tabbarAdmin .tab-indicator{width:33.3333%}
 #tabbarAdmin.tab-1-active .tab-indicator{transform:translateX(100%)}
 #tabbarAdmin.tab-2-active .tab-indicator{transform:translateX(200%)}
+/* Pedido 2026-08-03: 4ª pestaña "Calendario", solo para la cuenta de
+   prueba admintest (ver routeToRoleScreen) — el resto de admins nunca
+   recibe la clase "has-calendario", así que su barra de 3 pestañas de
+   arriba se queda intacta. Selector más específico (id+clase) para que
+   gane sin depender del orden en la hoja de estilos. */
+#tabbarAdmin.has-calendario .tab-indicator{width:25%}
+#tabbarAdmin.has-calendario.tab-1-active .tab-indicator{transform:translateX(100%)}
+#tabbarAdmin.has-calendario.tab-2-active .tab-indicator{transform:translateX(200%)}
+#tabbarAdmin.has-calendario.tab-3-active .tab-indicator{transform:translateX(300%)}
 /* 2026-07-17: tamaño de toque revisado a petición explícita ("iconos de
    un tamaño que sean clicables y encajen visualmente") — .bottom-tab ya
    era el área de toque completa (flex:1, todo el ancho de su mitad de la
@@ -1427,6 +1436,24 @@ body.pin-mode{overflow:hidden}
  * ajustadas) se dejan tal cual, a todo el ancho — cambiarlas para
  * centrarlas obligaría a combinar ese transform con el de las
  * animaciones, con riesgo real de romperlas. */
+/* Pedido 2026-08-03: calendario de partes por plantilla (solo admintest,
+   ver adPanelCalendario) — base pensada para móvil (apilada, compacta);
+   el @media de más abajo la ensancha para ordenador (mes y agenda lado a
+   lado, con más detalle por trabajo). */
+.cal-layout{display:flex;flex-direction:column}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:10.5px;font-weight:700;color:#8e8e93;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-day{position:relative;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:12px;cursor:pointer;touch-action:manipulation;font-size:13.5px;font-weight:600;color:#000;background:transparent;border:none;font-family:inherit;padding:0}
+.cal-day.cal-day-other{color:#c7c7cc}
+.cal-day.cal-day-today{background:#eaf1ff;color:#0049c5;font-weight:800}
+.cal-day.cal-day-selected{background:#0049c5 !important;color:#fff}
+.cal-day-dots{display:flex;gap:2px;height:5px}
+.cal-day-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.cal-item{background:#f4f4f7;border-radius:14px;padding:12px 13px;margin-bottom:8px;cursor:pointer}
+.cal-item-detail{display:none}
+.cal-day-group-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin:14px 0 6px}
+.cal-day-group-label:first-child{margin-top:0}
+
 @media (min-width: 900px) {
   #appScroll > div {
     max-width: 960px;
@@ -1446,6 +1473,15 @@ body.pin-mode{overflow:hidden}
     gap: 10px;
   }
   #adUsersList > .adu-card { margin: 0; }
+
+  /* Calendario de partes por plantilla (admintest) — en ordenador, mes y
+     agenda lado a lado, con más detalle por línea (ver renderCalDetail:
+     en ≥900px enseña TODO el mes, no solo el día tocado). */
+  .cal-layout { flex-direction: row; gap: 24px; align-items: flex-start; }
+  .cal-left { flex: 0 0 360px; }
+  .cal-right { flex: 1; min-width: 0; }
+  .cal-day { font-size: 15px; }
+  .cal-item-detail { display: block; }
 }
 </style>
 
@@ -1558,14 +1594,6 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
     <div class="nav-subtitle" id="navSubtitle"></div>
   </div>
   <div class="nav-side right" style="position:relative">
-    <!-- Pedido 2026-08-03: función de partes por plantilla (recurrentes)
-         solo para admintest de momento (prueba antes de pasarla a todos
-         los admins) — ver openAdminCalendarModal(). Oculto por defecto,
-         solo se muestra si currentUser.nombre==='admintest' (ver
-         routeToRoleScreen). -->
-    <div class="globe-btn" id="adCalendarNavBtn" style="display:none" onclick="openAdminCalendarModal()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-    </div>
     <div class="globe-btn notif-bell" id="notifBellWrap" onclick="openNotifModal()">
       <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       <span class="notif-badge" id="notifBadge"></span>
@@ -1946,96 +1974,6 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
     <div class="mg-modal-actions" style="margin-top:16px" id="acuActions">
       <button class="mg-modal-cancel" onclick="closeAdCreateUserModal()">Cancelar</button>
       <button class="mg-modal-confirm positive" id="acuSaveBtn" onclick="submitAdCreateUser()">Crear</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ MODAL: CALENDARIO DE PARTES POR PLANTILLA (pedido 2026-08-03) ═══
-     Solo admintest de momento (botón de acceso oculto para el resto, ver
-     adCalendarNavBtn) — el admin define un parte "tipo" con una
-     frecuencia (única/diaria/quincenal/trimestral) y el backend
-     (generarPartesDesdeePlantillas en Code_v5.gs, disparador diario) va
-     creando la fila real en PARTE DE TRABAJO cuando toca, con
-     STATUS="assigned" — el operario solo tiene que añadir fotos y
-     materiales (ver openAssignedCompleteModal). -->
-<div class="mg-modal-overlay fullbleed" id="adminCalendarModal" onclick="if(event.target===this)closeAdminCalendarModal()">
-  <div class="mg-modal" style="height:100%;max-height:100%;border-radius:0;overflow:hidden;display:flex;flex-direction:column;padding:0">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 20px) 18px 12px;border-bottom:.5px solid #f0f0f0;flex-shrink:0">
-      <div style="min-width:0">
-        <div class="mg-modal-title">Calendario de partes</div>
-        <div class="mg-modal-sub">Partes recurrentes ya asignados a los operarios</div>
-      </div>
-      <button type="button" onclick="closeAdminCalendarModal()" aria-label="Cerrar" style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:#f2f2f7;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation">
-        <i class="ti ti-x" style="font-size:19px;color:#000"></i>
-      </button>
-    </div>
-
-    <div id="calListWrap" style="overflow-y:auto;overflow-x:hidden;touch-action:pan-y;flex:1;padding:14px 18px;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain">
-      <button type="button" onclick="openPlantillaForm()" style="width:100%;padding:13px;border:none;border-radius:14px;background:#0049c5;color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px">
-        <i class="ti ti-plus" style="font-size:17px"></i> Nueva plantilla
-      </button>
-      <div id="calList"></div>
-    </div>
-
-    <!-- Formulario "Nueva plantilla" — mismo patrón Lista/Nuevo que el
-         resto de la app para Cliente/Obra/Tipo, pero autocontenido aquí
-         (ids propios "pl") en vez de compartir los del operario/adcr. -->
-    <div id="calFormWrap" style="display:none;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;flex:1;padding:14px 18px;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain">
-      <button type="button" onclick="closePlantillaForm()" style="display:flex;align-items:center;gap:6px;border:none;background:none;color:#0049c5;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:14px;padding:0">
-        <i class="ti ti-chevron-left" style="font-size:16px"></i> Volver
-      </button>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
-          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Cliente</label>
-          <select id="plCliente" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none"></select>
-        </div>
-        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
-          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Obra</label>
-          <select id="plObra" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none"></select>
-        </div>
-        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
-          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Operario asignado</label>
-          <select id="plOperario" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none"></select>
-        </div>
-        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
-          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Ayudante (opcional)</label>
-          <input type="text" id="plAyudante" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
-        </div>
-        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
-          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Vehículo (opcional)</label>
-          <input type="text" id="plVehiculo" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
-        </div>
-        <div style="display:flex;gap:10px">
-          <div style="flex:1;background:#f4f4f7;border-radius:14px;padding:10px 13px">
-            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Tipo de trabajo</label>
-            <select id="plTipo" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none"></select>
-          </div>
-          <div style="flex:1;background:#f4f4f7;border-radius:14px;padding:10px 13px">
-            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Horas</label>
-            <input type="number" id="plHoras" min="0" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
-          </div>
-        </div>
-        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
-          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Trabajos a realizar (opcional)</label>
-          <textarea id="plTrabajos" rows="3" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none;resize:none"></textarea>
-        </div>
-        <div style="display:flex;gap:10px">
-          <div style="flex:1;background:#f4f4f7;border-radius:14px;padding:10px 13px">
-            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Primera fecha</label>
-            <input type="date" id="plFechaInicio" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
-          </div>
-          <div style="flex:1;background:#f4f4f7;border-radius:14px;padding:10px 13px">
-            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Frecuencia</label>
-            <select id="plFrecuencia" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
-              <option value="unica">Única (una vez)</option>
-              <option value="diaria">Diaria</option>
-              <option value="quincenal">Quincenal</option>
-              <option value="trimestral">Trimestral</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <button type="button" id="plSaveBtn" onclick="submitPlantilla()" style="width:100%;padding:13px;border:none;border-radius:14px;background:#0049c5;color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-top:18px">Guardar plantilla</button>
     </div>
   </div>
 </div>
@@ -3533,6 +3471,106 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
     <button class="btn-clear" id="adcrBtnClear" onclick="adcrClearForm()">Borrar todo</button>
   </div>
 
+  <!-- ═══ PANEL: CALENDARIO DE PARTES POR PLANTILLA (pedido 2026-08-03) ═══
+       Solo admintest de momento (pestaña oculta para el resto, ver
+       tabAdCalendario/routeToRoleScreen). El admin define un parte "tipo"
+       con una frecuencia (única/diaria/quincenal/trimestral) y el backend
+       (generarPartesDesdeePlantillas en Code_v5.gs, disparador diario) va
+       creando la fila real en PARTE DE TRABAJO cuando toca, con
+       STATUS="assigned" — el operario solo tiene que añadir fotos y
+       materiales (ver openAssignedCompleteModal).
+       En móvil: solo el mes + puntos de color bajo cada día + el detalle
+       del día tocado (compacto). En ordenador (≥900px, ver el @media más
+       abajo): el mismo mes al lado de una agenda con TODOS los trabajos
+       del mes visible, con más campos por línea — ver renderCalDetail(). -->
+  <div id="adPanelCalendario" style="display:none">
+    <div class="cal-layout" id="calLayoutWrap">
+      <div class="cal-left">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 0">
+          <button type="button" onclick="calShiftMonth(-1)" aria-label="Mes anterior" style="width:36px;height:36px;border-radius:50%;background:#f2f2f7;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation"><i class="ti ti-chevron-left" style="font-size:16px"></i></button>
+          <div id="calMonthLabel" style="font-size:16px;font-weight:700;color:#000">—</div>
+          <button type="button" onclick="calShiftMonth(1)" aria-label="Mes siguiente" style="width:36px;height:36px;border-radius:50%;background:#f2f2f7;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation"><i class="ti ti-chevron-right" style="font-size:16px"></i></button>
+        </div>
+        <div style="padding:14px 16px 0">
+          <div class="cal-weekdays" id="calWeekdays"></div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+        <div style="padding:14px 16px">
+          <button type="button" onclick="openPlantillaForm()" style="width:100%;padding:13px;border:none;border-radius:14px;background:#0049c5;color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:8px">
+            <i class="ti ti-plus" style="font-size:17px"></i> Nueva plantilla
+          </button>
+          <button type="button" onclick="toggleCalManage()" style="width:100%;padding:10px;border:none;background:none;color:#0049c5;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-top:4px">Gestionar plantillas activas</button>
+          <div id="calManageWrap" style="display:none;margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="cal-right">
+        <div id="calDetailLabel" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;padding:0 16px 8px">—</div>
+        <div id="calDayDetail" style="padding:0 16px 16px"></div>
+      </div>
+    </div>
+
+    <!-- Formulario "Nueva plantilla" — mismo patrón Lista/Nuevo que el
+         resto de la app para Cliente/Obra/Tipo, pero autocontenido aquí
+         (ids propios "pl") en vez de compartir los del operario/adcr. -->
+    <div id="calFormWrap" style="display:none;padding:14px 16px">
+      <button type="button" onclick="closePlantillaForm()" style="display:flex;align-items:center;gap:6px;border:none;background:none;color:#0049c5;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:14px;padding:0">
+        <i class="ti ti-chevron-left" style="font-size:16px"></i> Volver
+      </button>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Cliente</label>
+          <select id="plCliente" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none"></select>
+        </div>
+        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Obra</label>
+          <select id="plObra" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none"></select>
+        </div>
+        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Operario asignado</label>
+          <select id="plOperario" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none"></select>
+        </div>
+        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Ayudante (opcional)</label>
+          <input type="text" id="plAyudante" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
+        </div>
+        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Vehículo (opcional)</label>
+          <input type="text" id="plVehiculo" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
+        </div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1;background:#f4f4f7;border-radius:14px;padding:10px 13px">
+            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Tipo de trabajo</label>
+            <select id="plTipo" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none"></select>
+          </div>
+          <div style="flex:1;background:#f4f4f7;border-radius:14px;padding:10px 13px">
+            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Horas</label>
+            <input type="number" id="plHoras" min="0" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
+          </div>
+        </div>
+        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Trabajos a realizar (opcional)</label>
+          <textarea id="plTrabajos" rows="3" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none;resize:none"></textarea>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1;background:#f4f4f7;border-radius:14px;padding:10px 13px">
+            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Primera fecha</label>
+            <input type="date" id="plFechaInicio" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
+          </div>
+          <div style="flex:1;background:#f4f4f7;border-radius:14px;padding:10px 13px">
+            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Frecuencia</label>
+            <select id="plFrecuencia" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
+              <option value="unica">Única (una vez)</option>
+              <option value="diaria">Diaria</option>
+              <option value="quincenal">Quincenal</option>
+              <option value="trimestral">Trimestral</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <button type="button" id="plSaveBtn" onclick="submitPlantilla()" style="width:100%;padding:13px;border:none;border-radius:14px;background:#0049c5;color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-top:18px">Guardar plantilla</button>
+    </div>
+  </div>
+
 </div>
 
 </div><!-- /#appScroll -->
@@ -3588,6 +3626,12 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
   <div class="bottom-tab" id="tabAdUsuarios" onclick="switchAdTab('usuarios')">
     <div class="tab-icon"><i class="ti ti-users"></i></div>
     <span id="adUsuariosTabLbl">Usuarios</span>
+  </div>
+  <!-- Pedido 2026-08-03: partes por plantilla — solo admintest de
+       momento (display:none por defecto, ver routeToRoleScreen). -->
+  <div class="bottom-tab" id="tabAdCalendario" onclick="switchAdTab('calendario')" style="display:none">
+    <div class="tab-icon"><i class="ti ti-calendar"></i></div>
+    <span>Calendario</span>
   </div>
 </div>
 </div><!-- /#mainFlexWrap -->
@@ -5170,10 +5214,17 @@ function routeToRoleScreen(deferTabbar) {
   document.getElementById('tabbarSafetyBg').style.display = 'none';
   document.getElementById('appScroll').style.display = 'block';
   document.getElementById('navExit').style.visibility = 'visible';
-  // Pedido 2026-08-03: partes por plantilla — solo visible para la cuenta
-  // de prueba admintest, ver openAdminCalendarModal().
-  var calBtn = document.getElementById('adCalendarNavBtn');
-  if (calBtn) calBtn.style.display = (currentUser && currentUser.nombre === 'admintest') ? 'flex' : 'none';
+  // Pedido 2026-08-03: partes por plantilla — pestaña "Calendario" en la
+  // barra inferior, solo visible para la cuenta de prueba admintest (el
+  // resto de admins sigue viendo su barra normal de 3 pestañas, sin
+  // tocar). "has-calendario" activa el CSS de 4 pestañas (25%, 4ª
+  // parada) solo cuando está presente — ver switchAdTab/#tabbarAdmin.
+  var calTab = document.getElementById('tabAdCalendario');
+  if (calTab) {
+    var isAdminTest = currentUser && currentUser.nombre === 'admintest';
+    calTab.style.display = isAdminTest ? 'flex' : 'none';
+    document.getElementById('tabbarAdmin').classList.toggle('has-calendario', !!isAdminTest);
+  }
 
   // BUG CORREGIDO: este título estaba escrito directamente en español,
   // ignorando por completo el sistema de traducción t()/currentLang — así
@@ -8220,17 +8271,22 @@ function switchAdTab(tab) {
     document.getElementById('tabAdJournal').classList.toggle('active', tab === 'journal');
     document.getElementById('tabAdAnalisis').classList.toggle('active', tab === 'analisis');
     document.getElementById('tabAdUsuarios').classList.toggle('active', tab === 'usuarios');
+    var calTabBtn = document.getElementById('tabAdCalendario');
+    if (calTabBtn) calTabBtn.classList.toggle('active', tab === 'calendario');
     document.getElementById('tabbarAdmin').classList.toggle('tab-1-active', tab === 'journal');
     document.getElementById('tabbarAdmin').classList.toggle('tab-2-active', tab === 'usuarios');
+    document.getElementById('tabbarAdmin').classList.toggle('tab-3-active', tab === 'calendario');
   }
   document.getElementById('adPanelJournal').style.display = tab === 'journal' ? 'block' : 'none';
   document.getElementById('adPanelAnalisis').style.display = tab === 'analisis' ? 'block' : 'none';
   document.getElementById('adPanelUsuarios').style.display = tab === 'usuarios' ? 'block' : 'none';
   document.getElementById('adPanelCrear').style.display = tab === 'crear' ? 'block' : 'none';
+  document.getElementById('adPanelCalendario').style.display = tab === 'calendario' ? 'block' : 'none';
   document.getElementById('adJournalSearchBar').style.display = tab === 'journal' ? 'block' : 'none';
   if (tab === 'analisis') initAnalisis();
   if (tab === 'usuarios') loadAdminUsers();
   if (tab === 'crear') adcrInit();
+  if (tab === 'calendario') initAdminCalendarPanel();
   updateAdminNavExit(tab);
 }
 
@@ -10368,35 +10424,196 @@ function submitAdCreateUser() {
 }
 
 /* ════════ CALENDARIO DE PARTES POR PLANTILLA (pedido 2026-08-03) ════════
- * Solo admintest de momento — ver adCalendarNavBtn. El backend
- * (Code_v5.gs: createPlantilla/getPlantillas/deactivatePlantilla,
- * generarPartesDesdeePlantillas) es quien de verdad exige rol admin; este
- * botón es solo un atajo de UI para no confundir a los admins reales
- * mientras se prueba. */
-function openAdminCalendarModal() {
-  document.getElementById('adminCalendarModal').classList.add('show');
+ * Solo admintest de momento — ver tabAdCalendario/routeToRoleScreen. El
+ * backend (Code_v5.gs: createPlantilla/getPlantillas/deactivatePlantilla,
+ * generarPartesDesdeePlantillas) es quien de verdad exige rol admin; la
+ * pestaña oculta es solo un atajo de UI para no confundir a los admins
+ * reales mientras se prueba.
+ * Vista: un mes en cuadrícula (reutiliza getAdminStats, ya existente,
+ * filtrando por desde/hasta) con un punto de color bajo cada día que
+ * tiene algún parte — color = mismo criterio que las insignias de estado
+ * en el resto de la app (CAL_STATUS_COLORS). En móvil se ve el detalle
+ * solo del día tocado (compacto); en ordenador (≥900px) se ve TODO el
+ * mes en una agenda con más campos por línea — ver renderCalDetail(). */
+var CAL_STATUS_COLORS = { pending:'#0049c5', approved:'#34c759', rejected:'#ff3b30', assigned:'#8b5cf6' };
+var CAL_STATUS_LABELS = { pending:'Pendiente', approved:'Aprobado', rejected:'Rechazado', assigned:'Por completar' };
+var calViewYear, calViewMonth, calSelectedDayKey;
+var calItemsByDay = {};
+var calMonthLoaded = false;
+
+function initAdminCalendarPanel() {
+  var today = new Date();
+  if (calViewYear === undefined) {
+    calViewYear = today.getFullYear();
+    calViewMonth = today.getMonth();
+    calSelectedDayKey = calDayKey(today);
+  }
   closePlantillaForm();
-  loadPlantillas();
+  loadCalMonth();
 }
-function closeAdminCalendarModal() {
-  document.getElementById('adminCalendarModal').classList.remove('show');
+
+// Igual que dateKey() en Code_v5.gs, pero en el cliente.
+function calDayKey(fecha) {
+  var d = new Date(fecha);
+  if (isNaN(d.getTime())) return String(fecha || '');
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// Cambiar de compacto (móvil) a detallado (ordenador) o viceversa al
+// redimensionar la ventana, sin tener que recargar la pantalla.
+window.addEventListener('resize', debounce(function() {
+  var panel = document.getElementById('adPanelCalendario');
+  if (panel && panel.style.display !== 'none' && calMonthLoaded) renderCalDetail();
+}, 200));
+
+function calShiftMonth(delta) {
+  calViewMonth += delta;
+  if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; }
+  else if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
+  loadCalMonth();
+}
+
+function loadCalMonth() {
+  var first = new Date(calViewYear, calViewMonth, 1);
+  var last = new Date(calViewYear, calViewMonth + 1, 0);
+  var desde = calDayKey(first), hasta = calDayKey(last);
+  document.getElementById('calMonthLabel').textContent = getMonthNames()[calViewMonth] + ' ' + calViewYear;
+
+  fetch(WEBAPP_URL + '?action=getAdminStats&codigo=' + encodeURIComponent(currentPin) + '&desde=' + desde + '&hasta=' + hasta + '&status=&t=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(result){
+      calItemsByDay = {};
+      ((result && result.status === 'ok') ? (result.data || []) : []).forEach(function(rec){
+        var day = calDayKey(rec.FECHA);
+        if (!calItemsByDay[day]) calItemsByDay[day] = [];
+        calItemsByDay[day].push(rec);
+      });
+      calMonthLoaded = true;
+      renderCalGrid();
+      renderCalDetail();
+    })
+    .catch(function(){
+      calItemsByDay = {};
+      renderCalGrid();
+      document.getElementById('calDayDetail').innerHTML = '<div style="text-align:center;padding:30px 0;color:#8e8e93">Error al cargar.</div>';
+    });
+}
+
+function renderCalGrid() {
+  var weekdaysEl = document.getElementById('calWeekdays');
+  if (!weekdaysEl.childElementCount) {
+    weekdaysEl.innerHTML = ['L','M','X','J','V','S','D'].map(function(w){ return '<div>'+w+'</div>'; }).join('');
+  }
+
+  var first = new Date(calViewYear, calViewMonth, 1);
+  var startOffset = (first.getDay() + 6) % 7; // lunes=0
+  var daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+  var todayKey = calDayKey(new Date());
+
+  var cells = [];
+  for (var i = 0; i < startOffset; i++) {
+    var prevDate = new Date(calViewYear, calViewMonth, i - startOffset + 1);
+    cells.push({ date: prevDate, other: true });
+  }
+  for (var d = 1; d <= daysInMonth; d++) {
+    cells.push({ date: new Date(calViewYear, calViewMonth, d), other: false });
+  }
+  while (cells.length % 7 !== 0) {
+    var last = cells[cells.length - 1].date;
+    cells.push({ date: new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1), other: true });
+  }
+
+  var html = '';
+  cells.forEach(function(c){
+    var key = calDayKey(c.date);
+    var items = calItemsByDay[key] || [];
+    var cls = 'cal-day';
+    if (c.other) cls += ' cal-day-other';
+    if (key === todayKey) cls += ' cal-day-today';
+    if (key === calSelectedDayKey) cls += ' cal-day-selected';
+    var dotsHtml = '';
+    if (items.length) {
+      var seenColors = [];
+      items.forEach(function(it){
+        var color = CAL_STATUS_COLORS[it.STATUS] || '#8e8e93';
+        if (seenColors.indexOf(color) === -1 && seenColors.length < 3) seenColors.push(color);
+      });
+      dotsHtml = '<div class="cal-day-dots">' + seenColors.map(function(c2){ return '<div class="cal-day-dot" style="background:'+c2+'"></div>'; }).join('') + '</div>';
+    }
+    html += '<button type="button" class="'+cls+'" onclick="selectCalDay(\''+key+'\')">' + c.date.getDate() + dotsHtml + '</button>';
+  });
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+function selectCalDay(key) {
+  calSelectedDayKey = key;
+  renderCalGrid();
+  renderCalDetail();
+}
+
+function calItemHtml(item, detailed) {
+  var color = CAL_STATUS_COLORS[item.STATUS] || '#8e8e93';
+  var label = CAL_STATUS_LABELS[item.STATUS] || item.STATUS;
+  var html = '<div class="cal-item" onclick="openReportById(\''+item.ID+'\', \'view\')">';
+  html += '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">';
+  html += '<div style="font-weight:700;font-size:14px;color:#000">' + escapeHtml(item.CLIENTE||'') + ' · ' + escapeHtml(item.OBRA||'') + '</div>';
+  html += '<div style="font-size:11px;font-weight:700;color:'+color+';flex-shrink:0;white-space:nowrap">' + label + '</div>';
+  html += '</div>';
+  html += '<div style="color:#666;font-size:12.5px;margin-top:2px">' + escapeHtml(item.OPERARIO||'') + (item['TIPO DE TRABAJO'] ? (' · '+escapeHtml(item['TIPO DE TRABAJO'])) : '') + '</div>';
+  html += '<div class="cal-item-detail" style="color:#8e8e93;font-size:12px;margin-top:4px">';
+  html += 'ID '+escapeHtml(item.ID||'')+(item.HORAS ? (' · '+item.HORAS+'h') : '')+(item.AYUDANTE ? (' · Ayudante: '+escapeHtml(item.AYUDANTE)) : '')+(item.VEHÍCULO ? (' · '+escapeHtml(item.VEHÍCULO)) : '');
+  html += '</div></div>';
+  return html;
+}
+
+// Móvil: solo el día tocado. Ordenador (≥900px, ver @media): todo el mes
+// agrupado por día, con más campos visibles por línea (.cal-item-detail).
+function renderCalDetail() {
+  var label = document.getElementById('calDetailLabel');
+  var body = document.getElementById('calDayDetail');
+  var isDesktop = window.innerWidth >= 900;
+
+  if (!isDesktop) {
+    label.textContent = calSelectedDayKey ? fmtDate(calSelectedDayKey) : '—';
+    var items = calItemsByDay[calSelectedDayKey] || [];
+    body.innerHTML = items.length ? items.map(function(it){ return calItemHtml(it, false); }).join('') : '<div class="mi-empty">Sin partes este día.</div>';
+    return;
+  }
+
+  label.textContent = 'Agenda del mes';
+  var days = Object.keys(calItemsByDay).sort();
+  if (!days.length) { body.innerHTML = '<div class="mi-empty">Sin partes este mes.</div>'; return; }
+  var html = '';
+  days.forEach(function(day){
+    html += '<div class="cal-day-group-label">' + fmtDate(day) + '</div>';
+    calItemsByDay[day].forEach(function(it){ html += calItemHtml(it, true); });
+  });
+  body.innerHTML = html;
+}
+
+var PL_FREQ_LABELS = { unica:'Única', diaria:'Diaria', quincenal:'Quincenal', trimestral:'Trimestral' };
+var calManageOpen = false;
+function toggleCalManage() {
+  calManageOpen = !calManageOpen;
+  var wrap = document.getElementById('calManageWrap');
+  wrap.style.display = calManageOpen ? 'block' : 'none';
+  if (calManageOpen) loadPlantillas();
 }
 
 function loadPlantillas() {
-  document.getElementById('calList').innerHTML = '<div style="text-align:center;padding:30px 0;color:#8e8e93">Cargando…</div>';
+  document.getElementById('calManageWrap').innerHTML = '<div style="text-align:center;padding:20px 0;color:#8e8e93">Cargando…</div>';
   fetch(WEBAPP_URL + '?action=getPlantillas&codigo=' + encodeURIComponent(currentPin) + '&t=' + Date.now())
     .then(function(r){ return r.json(); })
     .then(function(result){
       renderPlantillasList((result && result.status === 'ok') ? (result.data || []) : []);
     })
     .catch(function(){
-      document.getElementById('calList').innerHTML = '<div style="text-align:center;padding:30px 0;color:#8e8e93">Error al cargar.</div>';
+      document.getElementById('calManageWrap').innerHTML = '<div style="text-align:center;padding:20px 0;color:#8e8e93">Error al cargar.</div>';
     });
 }
 
-var PL_FREQ_LABELS = { unica:'Única', diaria:'Diaria', quincenal:'Quincenal', trimestral:'Trimestral' };
 function renderPlantillasList(list) {
-  var el = document.getElementById('calList');
+  var el = document.getElementById('calManageWrap');
   if (!list.length) { el.innerHTML = '<div class="mi-empty">No hay plantillas todavía.</div>'; return; }
   var html = '';
   list.forEach(function(pl){
@@ -10425,7 +10642,7 @@ function deactivatePlantillaConfirm(id) {
 
 var plListsLoaded = false, plOperariosLoaded = false;
 function openPlantillaForm() {
-  document.getElementById('calListWrap').style.display = 'none';
+  document.getElementById('calLayoutWrap').style.display = 'none';
   document.getElementById('calFormWrap').style.display = 'block';
   ['plAyudante', 'plVehiculo', 'plHoras', 'plTrabajos', 'plFechaInicio'].forEach(function(id){ document.getElementById(id).value = ''; });
   document.getElementById('plFrecuencia').value = 'unica';
@@ -10441,7 +10658,7 @@ function openPlantillaForm() {
 }
 function closePlantillaForm() {
   document.getElementById('calFormWrap').style.display = 'none';
-  document.getElementById('calListWrap').style.display = 'block';
+  document.getElementById('calLayoutWrap').style.display = '';
 }
 
 // Mismo patrón que adcrLoadTrabajadores (admin/panel Crear) — lista de
@@ -10491,8 +10708,13 @@ function submitPlantilla() {
     .then(function(r){ return r.json(); })
     .then(function(result){
       btn.disabled = false;
-      if (result && result.status === 'ok') { closePlantillaForm(); loadPlantillas(); }
-      else alert((result && result.message) || 'No se pudo guardar.');
+      if (result && result.status === 'ok') {
+        closePlantillaForm();
+        loadCalMonth();
+        if (calManageOpen) loadPlantillas();
+      } else {
+        alert((result && result.message) || 'No se pudo guardar.');
+      }
     })
     .catch(function(){ btn.disabled = false; alert('Error de red.'); });
 }
