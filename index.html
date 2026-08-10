@@ -804,6 +804,10 @@ body.pin-mode{overflow:hidden}
    st-pending y st-rejected. Mismo verde que .ad-status-badge.st-approved
    (Admin/Manager), para que el mismo estado se vea igual en toda la app. */
 .mi-badge.st-approved{background:#e5f9ec;color:#34c759}
+/* Pedido 2026-08-03: partes por plantilla, pendientes de que el operario
+   añada fotos/materiales — color propio (morado) para no confundirlo con
+   "pendiente de aprobación" (azul), es un estado previo distinto. */
+.mi-badge.st-assigned{background:#f3e8ff;color:#8b5cf6}
 /* ═══ FILA COMPACTA (2026-07-28) — mi-card/mg-card/ad-card comparten esta
    estructura interna: ID (+adjunto) / badge arriba, fecha·cliente·obra,
    quién lo subió·tipo de trabajo, comentario si existe, decisión abajo a
@@ -1410,6 +1414,39 @@ body.pin-mode{overflow:hidden}
 #onesignal-slidedown-container,
 .onesignal-slidedown-container,
 #onesignal-slidedown-dialog { display: none !important; }
+
+/* ════════ ORDENADOR (pedido 2026-08-03) ════════
+ * Ajuste incremental para pantallas grandes — que no se sienta como una
+ * web de móvil estirada. Se toca SOLO el contenido scrollable
+ * (#appScroll y lo que hay dentro): centrado con un ancho máximo
+ * cómodo, y las listas de tarjetas pasan a varias columnas
+ * (.ad-month-body es el contenedor compartido por Diario/Mis informes/
+ * Historial/Pendientes en los 3 roles — ver buildMiGroupedHtml; #adUsersList
+ * es el de Usuarios). El nav superior y la barra de pestañas inferior
+ * (position:fixed + transform para sus animaciones de esconderse, ya muy
+ * ajustadas) se dejan tal cual, a todo el ancho — cambiarlas para
+ * centrarlas obligaría a combinar ese transform con el de las
+ * animaciones, con riesgo real de romperlas. */
+@media (min-width: 900px) {
+  #appScroll > div {
+    max-width: 960px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .ad-month-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 10px;
+    align-items: start;
+  }
+  .ad-month-body > * { margin: 0; }
+  #adUsersList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 10px;
+  }
+  #adUsersList > .adu-card { margin: 0; }
+}
 </style>
 
 </head>
@@ -1521,6 +1558,14 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
     <div class="nav-subtitle" id="navSubtitle"></div>
   </div>
   <div class="nav-side right" style="position:relative">
+    <!-- Pedido 2026-08-03: función de partes por plantilla (recurrentes)
+         solo para admintest de momento (prueba antes de pasarla a todos
+         los admins) — ver openAdminCalendarModal(). Oculto por defecto,
+         solo se muestra si currentUser.nombre==='admintest' (ver
+         routeToRoleScreen). -->
+    <div class="globe-btn" id="adCalendarNavBtn" style="display:none" onclick="openAdminCalendarModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </div>
     <div class="globe-btn notif-bell" id="notifBellWrap" onclick="openNotifModal()">
       <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       <span class="notif-badge" id="notifBadge"></span>
@@ -1901,6 +1946,151 @@ document.addEventListener('gestureend', function (e) { e.preventDefault(); });
     <div class="mg-modal-actions" style="margin-top:16px" id="acuActions">
       <button class="mg-modal-cancel" onclick="closeAdCreateUserModal()">Cancelar</button>
       <button class="mg-modal-confirm positive" id="acuSaveBtn" onclick="submitAdCreateUser()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: CALENDARIO DE PARTES POR PLANTILLA (pedido 2026-08-03) ═══
+     Solo admintest de momento (botón de acceso oculto para el resto, ver
+     adCalendarNavBtn) — el admin define un parte "tipo" con una
+     frecuencia (única/diaria/quincenal/trimestral) y el backend
+     (generarPartesDesdeePlantillas en Code_v5.gs, disparador diario) va
+     creando la fila real en PARTE DE TRABAJO cuando toca, con
+     STATUS="assigned" — el operario solo tiene que añadir fotos y
+     materiales (ver openAssignedCompleteModal). -->
+<div class="mg-modal-overlay fullbleed" id="adminCalendarModal" onclick="if(event.target===this)closeAdminCalendarModal()">
+  <div class="mg-modal" style="height:100%;max-height:100%;border-radius:0;overflow:hidden;display:flex;flex-direction:column;padding:0">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 20px) 18px 12px;border-bottom:.5px solid #f0f0f0;flex-shrink:0">
+      <div style="min-width:0">
+        <div class="mg-modal-title">Calendario de partes</div>
+        <div class="mg-modal-sub">Partes recurrentes ya asignados a los operarios</div>
+      </div>
+      <button type="button" onclick="closeAdminCalendarModal()" aria-label="Cerrar" style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:#f2f2f7;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation">
+        <i class="ti ti-x" style="font-size:19px;color:#000"></i>
+      </button>
+    </div>
+
+    <div id="calListWrap" style="overflow-y:auto;overflow-x:hidden;touch-action:pan-y;flex:1;padding:14px 18px;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain">
+      <button type="button" onclick="openPlantillaForm()" style="width:100%;padding:13px;border:none;border-radius:14px;background:#0049c5;color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px">
+        <i class="ti ti-plus" style="font-size:17px"></i> Nueva plantilla
+      </button>
+      <div id="calList"></div>
+    </div>
+
+    <!-- Formulario "Nueva plantilla" — mismo patrón Lista/Nuevo que el
+         resto de la app para Cliente/Obra/Tipo, pero autocontenido aquí
+         (ids propios "pl") en vez de compartir los del operario/adcr. -->
+    <div id="calFormWrap" style="display:none;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;flex:1;padding:14px 18px;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain">
+      <button type="button" onclick="closePlantillaForm()" style="display:flex;align-items:center;gap:6px;border:none;background:none;color:#0049c5;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:14px;padding:0">
+        <i class="ti ti-chevron-left" style="font-size:16px"></i> Volver
+      </button>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Cliente</label>
+          <select id="plCliente" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none"></select>
+        </div>
+        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Obra</label>
+          <select id="plObra" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none"></select>
+        </div>
+        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Operario asignado</label>
+          <select id="plOperario" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none"></select>
+        </div>
+        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Ayudante (opcional)</label>
+          <input type="text" id="plAyudante" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
+        </div>
+        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Vehículo (opcional)</label>
+          <input type="text" id="plVehiculo" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
+        </div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1;background:#f4f4f7;border-radius:14px;padding:10px 13px">
+            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Tipo de trabajo</label>
+            <select id="plTipo" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none"></select>
+          </div>
+          <div style="flex:1;background:#f4f4f7;border-radius:14px;padding:10px 13px">
+            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Horas</label>
+            <input type="number" id="plHoras" min="0" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
+          </div>
+        </div>
+        <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Trabajos a realizar (opcional)</label>
+          <textarea id="plTrabajos" rows="3" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none;resize:none"></textarea>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1;background:#f4f4f7;border-radius:14px;padding:10px 13px">
+            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Primera fecha</label>
+            <input type="date" id="plFechaInicio" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
+          </div>
+          <div style="flex:1;background:#f4f4f7;border-radius:14px;padding:10px 13px">
+            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Frecuencia</label>
+            <select id="plFrecuencia" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
+              <option value="unica">Única (una vez)</option>
+              <option value="diaria">Diaria</option>
+              <option value="quincenal">Quincenal</option>
+              <option value="trimestral">Trimestral</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <button type="button" id="plSaveBtn" onclick="submitPlantilla()" style="width:100%;padding:13px;border:none;border-radius:14px;background:#0049c5;color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-top:18px">Guardar plantilla</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: COMPLETAR PARTE ASIGNADO (pedido 2026-08-03) ═══
+     Solo operariotest de momento — el operario solo ve/rellena lo que el
+     admin no podía saber de antemano: materiales y fotos (ver
+     completeAssignedReport en Code_v5.gs). Fotos reutilizan
+     handlePhotoSelect/renderThumbs del formulario normal, con el sufijo
+     "Assigned" para no compartir el estado global (photosObraSelected)
+     con el formulario "Nuevo informe" mientras ambos puedan convivir en
+     pantalla. -->
+<div class="mg-modal-overlay" id="assignedCompleteModal" onclick="if(event.target===this)closeAssignedCompleteModal()">
+  <div class="mg-modal">
+    <div class="mg-modal-title" style="margin-bottom:4px">Completar parte</div>
+    <div class="mg-modal-sub" id="acId" style="margin-bottom:14px">—</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Compañía</label>
+        <input type="text" id="acCompania" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
+      </div>
+      <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Materiales utilizados</label>
+        <textarea id="acMateriales" rows="3" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none;resize:none"></textarea>
+      </div>
+      <div style="background:#f4f4f7;border-radius:14px;padding:10px 13px">
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#8e8e93;margin-bottom:4px">Coste materiales (€)</label>
+        <input type="number" id="acPrecio" min="0" step="0.01" style="width:100%;border:none;background:transparent;font-family:inherit;font-size:15px;color:#000;outline:none">
+      </div>
+      <div class="photo-row">
+        <div class="photo-row-head">
+          <span class="rlabel">Fotos de obra</span>
+          <label class="photo-input-btn" id="acAddBtnObra">
+            <svg viewBox="0 0 24 24"><path d="M5 7H3a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-2l-2-3H7L5 7z"/><circle cx="10" cy="13" r="3"/></svg>
+            Añadir
+            <input type="file" accept="image/*" multiple style="display:none" onchange="acHandlePhotoSelect(this,'obra')">
+          </label>
+        </div>
+        <div class="photo-thumbs" id="acThumbsObra"></div>
+      </div>
+      <div class="photo-row">
+        <div class="photo-row-head">
+          <span class="rlabel">Fotos de materiales</span>
+          <label class="photo-input-btn" id="acAddBtnMat">
+            <svg viewBox="0 0 24 24"><path d="M5 7H3a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-2l-2-3H7L5 7z"/><circle cx="10" cy="13" r="3"/></svg>
+            Añadir
+            <input type="file" accept="image/*" multiple style="display:none" onchange="acHandlePhotoSelect(this,'materiales')">
+          </label>
+        </div>
+        <div class="photo-thumbs" id="acThumbsMat"></div>
+      </div>
+    </div>
+    <div class="mg-modal-actions" style="margin-top:16px">
+      <button class="mg-modal-cancel" onclick="closeAssignedCompleteModal()">Cancelar</button>
+      <button class="mg-modal-confirm positive" id="acSaveBtn" onclick="submitAssignedComplete()">Enviar</button>
     </div>
   </div>
 </div>
@@ -4980,6 +5170,10 @@ function routeToRoleScreen(deferTabbar) {
   document.getElementById('tabbarSafetyBg').style.display = 'none';
   document.getElementById('appScroll').style.display = 'block';
   document.getElementById('navExit').style.visibility = 'visible';
+  // Pedido 2026-08-03: partes por plantilla — solo visible para la cuenta
+  // de prueba admintest, ver openAdminCalendarModal().
+  var calBtn = document.getElementById('adCalendarNavBtn');
+  if (calBtn) calBtn.style.display = (currentUser && currentUser.nombre === 'admintest') ? 'flex' : 'none';
 
   // BUG CORREGIDO: este título estaba escrito directamente en español,
   // ignorando por completo el sistema de traducción t()/currentLang — así
@@ -5853,7 +6047,7 @@ function buildMiGroupedHtml(list, groupPrefix, showRejectComment) {
 
     html += '<div class="ad-month-body" id="mim_'+domKey+'" style="display:'+(isCollapsed?'none':'block')+'">';
     g.records.forEach(function(r){
-      var statusLabel = r.STATUS === 'pending' ? t('status_pending') : (r.STATUS === 'approved' ? t('status_approved') : t('status_rejected'));
+      var statusLabel = r.STATUS === 'assigned' ? 'Por completar' : (r.STATUS === 'pending' ? t('status_pending') : (r.STATUS === 'approved' ? t('status_approved') : t('status_rejected')));
       // BUG CORREGIDO / pedido (2026-07-21): antes solo "pending" era
       // swipeable (para el borrado) — un informe "rejected" también se
       // puede editar/reenviar (ver resubmitRecord en Code_v5.gs, acepta
@@ -5876,7 +6070,8 @@ function buildMiGroupedHtml(list, groupPrefix, showRejectComment) {
         }
       }
       var isNew = r.STATUS !== 'approved' && seen.indexOf(seenKey(r)) === -1;
-      html += '<div class="mi-card st-'+r.STATUS+(isNew?' card-shadow-new':'')+'" data-id="'+r.ID+'" data-ts="'+(r.TIMESTAMP||'')+'" onclick="openReportDetail(\''+r.ID+'\')">';
+      var miCardClick = r.STATUS === 'assigned' ? ('openAssignedCompleteModal(\''+r.ID+'\')') : ('openReportDetail(\''+r.ID+'\')');
+      html += '<div class="mi-card st-'+r.STATUS+(isNew?' card-shadow-new':'')+'" data-id="'+r.ID+'" data-ts="'+(r.TIMESTAMP||'')+'" onclick="'+miCardClick+'">';
       var showComment = !!showRejectComment;
       html += buildCardRowHtml(r, '<span class="mi-badge st-'+r.STATUS+'">'+statusLabel+'</span>', { showComment: showComment });
       if (showComment && r.STATUS === 'rejected' && r.COMENTARIO_MANAGER) {
@@ -10172,6 +10367,241 @@ function submitAdCreateUser() {
     });
 }
 
+/* ════════ CALENDARIO DE PARTES POR PLANTILLA (pedido 2026-08-03) ════════
+ * Solo admintest de momento — ver adCalendarNavBtn. El backend
+ * (Code_v5.gs: createPlantilla/getPlantillas/deactivatePlantilla,
+ * generarPartesDesdeePlantillas) es quien de verdad exige rol admin; este
+ * botón es solo un atajo de UI para no confundir a los admins reales
+ * mientras se prueba. */
+function openAdminCalendarModal() {
+  document.getElementById('adminCalendarModal').classList.add('show');
+  closePlantillaForm();
+  loadPlantillas();
+}
+function closeAdminCalendarModal() {
+  document.getElementById('adminCalendarModal').classList.remove('show');
+}
+
+function loadPlantillas() {
+  document.getElementById('calList').innerHTML = '<div style="text-align:center;padding:30px 0;color:#8e8e93">Cargando…</div>';
+  fetch(WEBAPP_URL + '?action=getPlantillas&codigo=' + encodeURIComponent(currentPin) + '&t=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(result){
+      renderPlantillasList((result && result.status === 'ok') ? (result.data || []) : []);
+    })
+    .catch(function(){
+      document.getElementById('calList').innerHTML = '<div style="text-align:center;padding:30px 0;color:#8e8e93">Error al cargar.</div>';
+    });
+}
+
+var PL_FREQ_LABELS = { unica:'Única', diaria:'Diaria', quincenal:'Quincenal', trimestral:'Trimestral' };
+function renderPlantillasList(list) {
+  var el = document.getElementById('calList');
+  if (!list.length) { el.innerHTML = '<div class="mi-empty">No hay plantillas todavía.</div>'; return; }
+  var html = '';
+  list.forEach(function(pl){
+    html += '<div style="background:#f4f4f7;border-radius:14px;padding:12px 13px;margin-bottom:8px;' + (pl.ACTIVA ? '' : 'opacity:.5') + '">';
+    html += '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">';
+    html += '<div style="font-weight:700;font-size:15px;color:#000">' + escapeHtml(pl.CLIENTE || '') + ' · ' + escapeHtml(pl.OBRA || '') + '</div>';
+    html += '<div style="font-size:12px;font-weight:700;color:#0049c5;flex-shrink:0">' + (PL_FREQ_LABELS[pl.FRECUENCIA] || pl.FRECUENCIA) + '</div>';
+    html += '</div>';
+    html += '<div style="color:#666;font-size:13px;margin-top:2px">' + escapeHtml(pl.OPERARIO || '') + ' · ' + escapeHtml(pl.TIPO || '') + ' · ' + (pl.HORAS || 0) + 'h</div>';
+    html += '<div style="font-size:12px;color:#8e8e93;margin-top:4px">Desde ' + fmtDate(pl.FECHA_INICIO) + (pl.ULTIMA_GENERACION ? (' · Último generado: ' + fmtDate(pl.ULTIMA_GENERACION)) : ' · Aún no generado') + '</div>';
+    html += pl.ACTIVA
+      ? '<button type="button" onclick="deactivatePlantillaConfirm(\'' + pl.ID + '\')" style="margin-top:8px;border:none;background:none;color:#ff3b30;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation;padding:0">Desactivar</button>'
+      : '<div style="font-size:12px;color:#8e8e93;margin-top:8px">Desactivada</div>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function deactivatePlantillaConfirm(id) {
+  if (!confirm('¿Desactivar esta plantilla? No se generarán más partes a partir de ella.')) return;
+  fetch(WEBAPP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'deactivatePlantilla', codigo: currentPin, id: id }) })
+    .then(function(r){ return r.json(); })
+    .then(function(result){ if (result && result.status === 'ok') loadPlantillas(); else alert((result && result.message) || 'Error'); })
+    .catch(function(){ alert('Error de red.'); });
+}
+
+var plListsLoaded = false, plOperariosLoaded = false;
+function openPlantillaForm() {
+  document.getElementById('calListWrap').style.display = 'none';
+  document.getElementById('calFormWrap').style.display = 'block';
+  ['plAyudante', 'plVehiculo', 'plHoras', 'plTrabajos', 'plFechaInicio'].forEach(function(id){ document.getElementById(id).value = ''; });
+  document.getElementById('plFrecuencia').value = 'unica';
+  if (!plListsLoaded) {
+    plListsLoaded = true;
+    loadLists().then(function() {
+      buildSelect('plCliente', LISTS.clientes, t('ph_select'));
+      buildSelect('plObra', LISTS.obras, t('ph_select'));
+      buildSelect('plTipo', LISTS.tipos, t('ph_select'));
+    });
+  }
+  loadOperariosForPlantilla();
+}
+function closePlantillaForm() {
+  document.getElementById('calFormWrap').style.display = 'none';
+  document.getElementById('calListWrap').style.display = 'block';
+}
+
+// Mismo patrón que adcrLoadTrabajadores (admin/panel Crear) — lista de
+// operarios activos vía adminListUsers, reutilizando adUsersAll si ya
+// está cacheado en esta sesión.
+function loadOperariosForPlantilla() {
+  if (plOperariosLoaded) return;
+  plOperariosLoaded = true;
+  var populate = function(users) {
+    var nombres = (users || [])
+      .filter(function(u){ return u.rol === 'operario' && u.status === 'active'; })
+      .map(function(u){ return u.nombre; })
+      .filter(function(n, i, a){ return n && a.indexOf(n) === i; })
+      .sort();
+    buildSelect('plOperario', nombres, t('ph_select'));
+  };
+  if (typeof adUsersAll !== 'undefined' && adUsersAll && adUsersAll.length) { populate(adUsersAll); return; }
+  fetch(WEBAPP_URL + '?action=adminListUsers&codigo=' + encodeURIComponent(currentPin) + '&t=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(result){ if (result && result.status === 'ok') populate(result.users); else plOperariosLoaded = false; })
+    .catch(function(){ plOperariosLoaded = false; });
+}
+
+function submitPlantilla() {
+  var cliente = document.getElementById('plCliente').value;
+  var obra = document.getElementById('plObra').value;
+  var operario = document.getElementById('plOperario').value;
+  var tipo = document.getElementById('plTipo').value;
+  var fechaInicio = document.getElementById('plFechaInicio').value;
+  if (!cliente || !obra || !operario || !tipo || !fechaInicio) { alert('Rellena cliente, obra, operario, tipo y fecha.'); return; }
+
+  var btn = document.getElementById('plSaveBtn');
+  btn.disabled = true;
+  fetch(WEBAPP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      action: 'createPlantilla', codigo: currentPin,
+      cliente: cliente, obra: obra, operario: operario,
+      ayudante: document.getElementById('plAyudante').value,
+      vehiculo: document.getElementById('plVehiculo').value,
+      tipo: tipo, horas: document.getElementById('plHoras').value,
+      trabajos: document.getElementById('plTrabajos').value,
+      fechaInicio: fechaInicio, frecuencia: document.getElementById('plFrecuencia').value
+    })
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(result){
+      btn.disabled = false;
+      if (result && result.status === 'ok') { closePlantillaForm(); loadPlantillas(); }
+      else alert((result && result.message) || 'No se pudo guardar.');
+    })
+    .catch(function(){ btn.disabled = false; alert('Error de red.'); });
+}
+
+/* ════════ COMPLETAR PARTE ASIGNADO (pedido 2026-08-03) ════════
+ * Solo operariotest de momento (ver renderMyReports: solo esa cuenta
+ * llega a tener registros STATUS="assigned" mientras se prueba). Fotos
+ * con su propio estado (acPhotosObraSelected/acPhotosMatSelected) para no
+ * compartirlo con el formulario "Nuevo informe" — reutiliza
+ * compressImage() igual que el resto de la app. */
+var acPhotosObraSelected = [], acPhotosMatSelected = [];
+var acCurrentId = null;
+
+function openAssignedCompleteModal(id) {
+  acCurrentId = id;
+  acPhotosObraSelected = [];
+  acPhotosMatSelected = [];
+  document.getElementById('acId').textContent = id;
+  document.getElementById('acCompania').value = '';
+  document.getElementById('acMateriales').value = '';
+  document.getElementById('acPrecio').value = '';
+  acRenderThumbs('obra');
+  acRenderThumbs('materiales');
+  document.getElementById('assignedCompleteModal').classList.add('show');
+}
+function closeAssignedCompleteModal() {
+  document.getElementById('assignedCompleteModal').classList.remove('show');
+  acCurrentId = null;
+}
+
+function acHandlePhotoSelect(input, group) {
+  var files = Array.from(input.files || []);
+  var targetArr = group === 'obra' ? acPhotosObraSelected : acPhotosMatSelected;
+  var promises = files.map(function(file) {
+    return compressImage(file, 1280, 0.7).then(function(base64) {
+      return { name: file.name.replace(/\.(heic|HEIC)$/, '.jpg'), type:'image/jpeg', data: base64 };
+    });
+  });
+  Promise.all(promises).then(function(results) {
+    results.forEach(function(r){ targetArr.push(r); });
+    acRenderThumbs(group);
+  });
+  input.value = '';
+}
+
+function acRenderThumbs(group) {
+  var arr = group === 'obra' ? acPhotosObraSelected : acPhotosMatSelected;
+  var wrap = document.getElementById(group === 'obra' ? 'acThumbsObra' : 'acThumbsMat');
+  var bigBtn = document.getElementById(group === 'obra' ? 'acAddBtnObra' : 'acAddBtnMat');
+  wrap.innerHTML = '';
+  arr.forEach(function(photo, idx) {
+    var div = document.createElement('div');
+    div.className = 'photo-thumb';
+    div.innerHTML = '<img src="'+photo.data+'"><div class="rm" onclick="acRemovePhoto(\''+group+'\','+idx+')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>';
+    wrap.appendChild(div);
+  });
+  if (arr.length > 0) {
+    bigBtn.classList.add('hidden');
+    var addMini = document.createElement('label');
+    addMini.className = 'photo-add-mini';
+    addMini.innerHTML = '<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><input type="file" accept="image/*" multiple style="display:none" onchange="acHandlePhotoSelect(this,\''+group+'\')">';
+    wrap.appendChild(addMini);
+  } else {
+    bigBtn.classList.remove('hidden');
+  }
+}
+function acRemovePhoto(group, idx) {
+  var arr = group === 'obra' ? acPhotosObraSelected : acPhotosMatSelected;
+  arr.splice(idx, 1);
+  acRenderThumbs(group);
+}
+
+function submitAssignedComplete() {
+  if (!acCurrentId) return;
+  var id = acCurrentId;
+  var btn = document.getElementById('acSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+
+  var payload = {
+    action: 'completeAssignedReport', codigo: currentPin, id: id,
+    compania: document.getElementById('acCompania').value,
+    materiales: document.getElementById('acMateriales').value,
+    precio: document.getElementById('acPrecio').value
+  };
+
+  function resetBtn() { btn.disabled = false; btn.textContent = 'Enviar'; }
+
+  fetch(WEBAPP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload) })
+    .then(function(r){ return r.json(); })
+    .then(function(result) {
+      if (!result || result.status !== 'ok') { resetBtn(); alert((result && result.message) || 'No se pudo enviar.'); return; }
+      var finish = function() {
+        resetBtn();
+        closeAssignedCompleteModal();
+        myReportsLoaded = false;
+        loadMyReports();
+      };
+      if (acPhotosObraSelected.length || acPhotosMatSelected.length) {
+        fetch(WEBAPP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify({ action:'uploadReportPhotos', codigo: currentPin, id: id, photosObra: acPhotosObraSelected, photosMateriales: acPhotosMatSelected }) })
+          .then(finish).catch(finish);
+      } else {
+        finish();
+      }
+    })
+    .catch(function(){ resetBtn(); alert('Error de red.'); });
+}
+
 /* Solo aplica a active/rejected/suspended (ver openAdUserModal) — cambia
  * entre la ficha de solo lectura y el formulario editable, sin volver a
  * pedir datos al servidor (ya están todos en memoria). */
@@ -11066,7 +11496,8 @@ function openReportById(id, mode) {
   if (currentUser.rol === 'operario') {
     var r = myReportsCache.find(function(x){ return x.ID === id; });
     if (r) {
-      if (mode === 'edit' && r.STATUS === 'rejected') openEditReport(id);
+      if (mode === 'complete' && r.STATUS === 'assigned') openAssignedCompleteModal(id);
+      else if (mode === 'edit' && r.STATUS === 'rejected') openEditReport(id);
       else openReportDetail(id);
       return;
     }
@@ -11079,7 +11510,8 @@ function openReportById(id, mode) {
         dataCacheSet('myReports', myReportsCache);
         var r2 = myReportsCache.find(function(x){ return x.ID === id; });
         if (!r2) return;
-        if (mode === 'edit' && r2.STATUS === 'rejected') openEditReport(id);
+        if (mode === 'complete' && r2.STATUS === 'assigned') openAssignedCompleteModal(id);
+        else if (mode === 'edit' && r2.STATUS === 'rejected') openEditReport(id);
         else openReportDetail(id);
       })
       .catch(function(){});
